@@ -140,7 +140,8 @@ A.renderMetas=function(){
   else line="Todavía no hay aportes: anotá un ahorro y elegí esta meta.";
   if(g.date&&left>0){const mm=Math.max(1,T.diffM(A.today().slice(0,7),g.date.slice(0,7)));line+=` Para llegar en ${A.monthName(g.date.slice(0,7))} necesitás ${f(conv(left/mm,g.cur))} por mes.`}
   if(i===0)h+=`<button data-a="goal" data-id="${g.id}" style="display:block;width:100%"><h1 class="title" style="margin-top:6px">${A.esc(g.name)}</h1>
-   <div class="row2" style="margin-top:22px"><b style="font-size:34px">${f(conv(sv,g.cur))} <small style="font-size:15px;font-family:var(--body);font-weight:400;color:var(--mute)">de ${f(conv(tgt,g.cur))}</small></b><b style="font-size:30px;color:#F0C25A">${Math.round(p)}%</b></div>
+   ${(g.ic||"home")==="home"?`<div style="margin:14px 0 -44px">${A.casa(p,g.name+": "+Math.round(p)+"% reunido")}</div>`:""}
+   <div class="row2" style="margin-top:4px"><b style="font-size:34px">${f(conv(sv,g.cur))} <small style="display:block;margin-top:2px;font-size:15px;font-family:var(--body);font-weight:400;color:var(--mute)">de ${f(conv(tgt,g.cur))}</small></b><b style="font-size:30px;color:#F0C25A">${Math.round(p)}%</b></div>
    <div class="prog" style="height:4px"><div style="width:${p}%"></div></div><div class="note">${line}</div></button><div style="height:18px"></div>`;
   else h+=`<button class="card" data-a="goal" data-id="${g.id}" style="display:block;width:100%"><h4>${A.ic(g.ic||"plane")}<span>${A.esc(g.name)}</span><span style="margin-left:auto;font-family:var(--disp);color:#F0C25A">${Math.round(p)}%</span></h4><div class="prog"><div style="width:${p}%"></div></div><div class="note">${f(conv(sv,g.cur))} de ${f(conv(tgt,g.cur))}${g.pct?" · "+g.pct+"% del ahorro":""}</div></button>`;
  });
@@ -191,5 +192,5 @@ A.render=function(){
 A.act.tab=b=>{if(A.S.ui.tab===b.dataset.t)return;A.S.ui.tab=b.dataset.t;A.persist();A.render()};
 })();
 
-A.fitBig=function(){document.querySelectorAll('.big,.net').forEach(e=>{e.style.fontSize='';const num=e.querySelector('#bigv')||e;const par=e.parentElement,w=par.clientWidth-8;if(w<=0)return;const txt=(num.dataset.final||num.textContent)+(num===e?'':'').replace(/\d/g,'0');let f=parseFloat(getComputedStyle(e).fontSize);const m=document.createElement('span');m.style.cssText='position:absolute;visibility:hidden;white-space:nowrap';m.style.font=getComputedStyle(e).font;m.style.letterSpacing=getComputedStyle(e).letterSpacing;m.textContent=txt;par.appendChild(m);let t=0;while(m.getBoundingClientRect().width+46>w&&f>40&&t++<40){f-=3;e.style.fontSize=f+'px';m.style.fontSize=f+'px'}m.remove()})};
+A.fitBig=function(){document.querySelectorAll('.big,.net').forEach(e=>{e.style.fontSize='';const num=e.querySelector('#bigv')||e;const par=e.parentElement,w=par.clientWidth-8;if(w<=0)return;const txt=(num.dataset.final||num.textContent).replace(/\d/g,'0');let f=parseFloat(getComputedStyle(e).fontSize);const m=document.createElement('span');m.style.cssText='position:absolute;visibility:hidden;white-space:nowrap';m.style.font=getComputedStyle(e).font;m.style.letterSpacing=getComputedStyle(e).letterSpacing;m.textContent=txt;par.appendChild(m);let t=0;while(m.getBoundingClientRect().width+46>w&&f>40&&t++<40){f-=3;e.style.fontSize=f+'px';m.style.fontSize=f+'px'}m.remove()})};
 window.addEventListener('resize',()=>A.fitBig&&A.fitBig());

@@ -129,10 +129,14 @@ function debtsTotal(S){return S.debts.reduce((s,d)=>s+(d.cur==="USD"?d.a*S.cfg.f
 function owedTotal(S){return S.mov.filter(m=>m.t==="d"&&!m.closed).reduce((s,m)=>s+m.a,0)}
 function invTotal(S){return S.inv.reduce((s,i)=>s+(i.cur==="USD"?i.v*S.cfg.fx:i.v),0)}
 function netWorth(S){const b=boxes(S);return R(b.ars+b.usd*S.cfg.fx+invTotal(S)+owedTotal(S)-debtsTotal(S))}
-function goalSaved(S,g){return (g.saved0||0)+S.mov.filter(m=>m.t==="a"&&m.goal===g.id).reduce((s,m)=>s+(g.cur==="USD"?(m.u||0):m.a),0)}
+function goalShare(S,g,m){ // cuánto de un ahorro le toca a la meta: la que eligió, o el reparto por % entre todas
+ const amt=g.cur==="USD"?(m.u||(m.fx?m.a/m.fx:m.a/(S.cfg.fx||1))):m.a;
+ if(m.goal)return m.goal===g.id?amt:0;
+ const tot=S.goals.reduce((x,y)=>x+(y.pct||0),0);return tot>0?amt*(g.pct||0)/tot:0}
+function goalSaved(S,g){return (g.saved0||0)+S.mov.filter(m=>m.t==="a").reduce((s,m)=>s+goalShare(S,g,m),0)}
 function goalMonthly(S,g){ // aporte mensual real: ahorro a la meta de los últimos 3 meses completos
  const T=ym(new Date());const k0=addM(T,-3);
- const s=S.mov.filter(m=>m.t==="a"&&m.goal===g.id&&ymOf(m.d)>=k0&&ymOf(m.d)<T).reduce((s,m)=>s+(g.cur==="USD"?(m.u||0):m.a),0);
+ const s=S.mov.filter(m=>m.t==="a"&&ymOf(m.d)>=k0&&ymOf(m.d)<T).reduce((s,m)=>s+goalShare(S,g,m),0);
  return s/3;
 }
 /* serie de patrimonio mes a mes (aprox.: cajas con el dólar vigente) */

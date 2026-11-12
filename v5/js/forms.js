@@ -2,7 +2,7 @@
 (function(){
 const S=()=>A.S;
 const setSheet=h=>{A.$("#sheet").innerHTML=h};
-const sc=()=>A.$("#sheet .sh-body");
+const sc=()=>A.$("#sheet .cmid")||A.$("#sheet .sh-body");
 const keepScroll=fn=>{const b=sc(),y=b?b.scrollTop:0;fn();const n=sc();if(n)n.scrollTop=y};
 
 /* ===== Carga rápida ===== */
@@ -12,7 +12,8 @@ function amtView(){const s=D.amt;if(!s)return `<span class="ph">0</span>`;const 
 function catGrid(sel,all){
  const cs=S().cats;const show=all?cs:cs.slice(0,7);
  return `<div class="grid4">${show.map(c=>`<button class="cat ${sel===c.id?"on":""}" data-a="ccat" data-id="${c.id}" style="--c:${c.c}">${A.catSvg(c)}${A.esc(c.n)}</button>`).join("")}${all?`<button class="cat more" data-a="newcat"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva</button>`:`<button class="cat more" data-a="cmore"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Más</button>`}</div>`}
-const keypad=`<div class="pad4">${["1","2","3","4","5","6","7","8","9",",","0","⌫"].map(k=>`<button data-a="key" data-k="${k}" aria-label="${k}">${k}</button>`).join("")}</div>`;
+const BKS='<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h11a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7 6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg>';
+const keypad=`<div class="pad4">${["1","2","3","4","5","6","7","8","9",",","0","bk"].map(k=>k==="bk"?`<button data-a="key" data-k="⌫" class="bk" aria-label="Borrar">${BKS}</button>`:`<button data-a="key" data-k="${k}" aria-label="${k}">${k}</button>`).join("")}</div>`;
 function drawCarga(){
  const st=S(),t=D.t;const v=A.parseAmt(D.amt);
  const dl=D.d===A.today()?"Hoy":A.dateShort(D.d);
@@ -36,9 +37,9 @@ function drawCarga(){
   <div class="lbl">Categoría</div>${catGrid(D.c,D.more)}<button class="go" data-a="csave" ${v>0&&D.c?"":"disabled"}>Repartir en meses</button>`}
  else body+=`<label class="fld"><span>¿A quién se lo prestaste?</span><input id="dn" placeholder="Nombre o nota" value="${A.esc(D.note)}" autocomplete="off"></label><button class="go" data-a="csave" ${v>0?"":"disabled"}>Guardar</button>`;
  const noteRow=D.det?`<label class="fld" style="margin-top:8px"><span>Nota</span><input id="dnote" placeholder="Opcional" value="${A.esc(D.note)}" autocomplete="off"></label>`:"";
- setSheet(`<div class="sh-body"><div class="sh-head" style="padding:calc(var(--safe-t) + 4px) 0 0"><div class="chips" style="margin:0;align-items:center"><label class="chip" style="position:relative">${dl}<input type="date" id="cd" value="${D.d}" style="position:absolute;inset:0;opacity:0;width:100%" aria-label="Fecha"></label>${t==="g"?`<button class="chip ${D.usd?"on":""}" data-a="cusd">USD</button><button class="chip" data-a="cdet">${D.det?"Sin nota":"+ Nota"}</button>`:""}</div><button class="xbtn" data-a="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="${A.P.x}"/></svg></button></div>
+ setSheet(`<div class="ctop"><div class="sh-head" style="padding:calc(var(--safe-t) + 4px) 0 0"><div class="chips" style="margin:0;align-items:center"><label class="chip" style="position:relative">${dl}<input type="date" id="cd" value="${D.d}" style="position:absolute;inset:0;opacity:0;width:100%" aria-label="Fecha"></label>${t==="g"?`<button class="chip ${D.usd?"on":""}" data-a="cusd">USD</button><button class="chip" data-a="cdet">${D.det?"Sin nota":"+ Nota"}</button>`:""}</div><button class="xbtn" data-a="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="${A.P.x}"/></svg></button></div>
  <div class="tcs">${TYPES.map(x=>`<button class="${t===x[0]?"on":""}" data-a="ctype" data-t="${x[0]}">${x[1]}</button>`).join("")}</div>
- <div class="amt"><div><span class="cur">${D.usd&&t==="g"?"USD":"$"}</span>${amtView()}</div></div>${t==="g"?noteRow:""}${body}${keypad}</div>`);
+ <div class="amt"><div><span class="cur">${D.usd&&t==="g"?"USD":"$"}</span>${amtView()}</div></div></div><div class="cmid">${t==="g"?noteRow:""}${body}</div><div class="ckeys">${keypad}</div>`);
 }
 A.openCarga=function(){D={t:"g",amt:"",usd:false,pu:false,c:null,d:A.today(),note:"",tag:"",n:3,u:"",goal:null,next:false,more:false,det:false};A.sheet("",{cls:"carga"});drawCarga()};
 A.act.fabopen=A.openCarga;
