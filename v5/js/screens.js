@@ -65,7 +65,7 @@ A.drawDonut=function(){
   else rows=A.S.mov.filter(m=>(m.t==="g"||m.t==="r")&&m.c===cur.id&&inR(m)).sort((a,b)=>a.d<b.d?1:-1).map(m=>mvRow(m,cur.n)).join("");
   det=`<div class="dets">${rows}</div>`}
  else if(A._drill)det=`<div class="dets">${sl.segs.map(x=>`<button class="dr" data-a="slice" data-i="${x.id}"><i style="background:${x.c}"></i><span>${A.esc(x.n)}</span><em>${Math.round(x.v/sl.tot*100)}%</em><b>${A.money(x.v)}</b></button>`).join("")}</div>`;
- else det=`<div class="leg">${sl.segs.map(x=>`<button data-a="slice" data-i="${x.id}"><i style="background:${x.c}"></i>${A.esc(x.n)}</button>`).join("")}</div>`;
+ else det="";
  const back=A._drill?`<button class="addl" style="padding:6px 0" data-a="slice" data-i="">‹ Volver a todo</button>`:"";
  el.innerHTML=sl.tot?`<div class="dn"><div class="dsvg">${donutSvg(sl,sel)}<button class="dc" data-a="slice" data-i="">${center}</button></div></div>${back}${det}`:`<div class="empty" style="padding:26px 0">Todavía no hay movimientos en este período.</div>`;
 };

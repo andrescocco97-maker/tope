@@ -16,6 +16,7 @@ A.render();
 if(A.S.setup)A.fetchFx(false);
 if(!A.S.setup)setTimeout(()=>A.wizard(),50);
 else if(new URLSearchParams(location.search).get("nuevo"))setTimeout(()=>A.openCarga(),80);
-if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator&&location.protocol.startsWith("http")){const had=!!navigator.serviceWorker.controller;navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{r.update()}).catch(()=>{});
+ navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had&&!window._rl){window._rl=1;location.reload()}})}
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 })();
