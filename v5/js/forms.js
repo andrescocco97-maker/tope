@@ -84,7 +84,9 @@ A.act.subnew=()=>{const keep={...D},c=A.cat(D.c);
 A.act.ahorrar=()=>{const k=A.today().slice(0,7),m=T.calc(A.S,k,A.today()).ahorro,reg=T.ahorroRange(A.S,k+"-01",k+"-31");A.openCarga();D.sp="a";D.amt=String(Math.max(0,Math.round(m-reg)));drawCarga()};
 document.addEventListener("change",e=>{if(e.target.id==="cd"&&D){D.d=e.target.value||A.today();redraw()}});
 document.addEventListener("input",e=>{if(!D)return;if(e.target.id==="dn"||e.target.id==="dnote")D.note=e.target.value;if(e.target.id==="du"){D.u=e.target.value}});
-function commit(m,msg){const st=A.S;st.mov.push(m);A.persist();A.close();A.render();A.buzz(18);A.toast(msg||"Anotado",()=>{st.mov=st.mov.filter(x=>x.id!==m.id);A.persist();A.render()})}
+function limMsg(m,st){const c=m.t==="g"&&st.cats.find(x=>x.id===m.c);if(!c||!(c.lim>0))return null;const k=m.d.slice(0,7),g=T.byCat(st,k+"-01",k+"-31")[c.id]||0,b=g-m.a;
+ if(b<c.lim&&g>=c.lim)return c.n+": te pasaste del límite";if(b<c.lim*.8&&g>=c.lim*.8)return c.n+": ya usaste el "+Math.round(g/c.lim*100)+"% del límite";return null}
+function commit(m,msg){const st=A.S;st.mov.push(m);msg=limMsg(m,st)||msg;A.persist();A.close();A.render();A.buzz(18);A.toast(msg||"Anotado",()=>{st.mov=st.mov.filter(x=>x.id!==m.id);A.persist();A.render()})}
 A.act.csave=()=>{const st=A.S,v=A.parseAmt(D.amt);if(!(v>0))return;const t=D.t,fx=st.cfg.fx||1;
  if(t==="i"){const r=D.rid&&st.rec.find(x=>x.id===D.rid);commit(r?{id:T.uid(),t:"i",a:Math.round(v),d:D.d,note:r.name,rid:r.id,occ:D.occ,feeds:r.feeds||"cur"}:{id:T.uid(),t:"i",a:Math.round(v),d:D.d,note:D.note.trim()||undefined,feeds:D.next?"next":"cur"});return}
  if(D.sp==="a"){const u=A.parseAmt(D.u);commit({id:T.uid(),t:"a",a:Math.round(v),u:u||undefined,fx:u?v/u:undefined,goal:D.goal||undefined,d:D.d},"Ahorro anotado");return}
@@ -268,4 +270,11 @@ A.act.wnext=()=>{if(W.i<4){W.i++;wz();return}
   if(dia<+A.today().slice(8))st.mov.push({id:T.uid(),t:"g",a:Math.round(a),c:f[1],d:k+"-"+T.pad(dia),note:f[0],rid:id,occ:k,ini:true})});
  st.goals=d.g.map(g=>({id:T.uid(),name:g.name,cur:"USD",a:P(g.a),pct:Math.round(P(g.pct)),ic:g.ic,auto:g.auto?"colchon":undefined,saved0:0}));
  st.setup=true;A.persist();A.close();A.render();A.fetchFx(true)};
+})();
+
+(function(){const st=()=>A.S;
+ const f=(c)=>A.form(c&&c.lim?"Límite de "+c.n:"Nuevo límite mensual",[...(c&&c.lim?[]:[{k:"c",label:"Categoría",type:"select",v:st().cats.find(x=>!x.lim)?.id,opts:st().cats.filter(x=>!x.lim).map(x=>[x.id,x.n])}]),{k:"lim",label:"Tope por mes",type:"num",v:c&&c.lim?String(c.lim):""}],
+  {ok:"Guardar",extra:c&&c.lim?[{i:0,t:"Quitar límite",cls:"red",f:()=>{c.lim=undefined;A.persist();A.close();A.render()}}]:[],save:v=>{const a=A.parseAmt(v.lim);if(!(a>0))return false;const t=c||st().cats.find(x=>x.id===v.c);if(!t)return false;t.lim=Math.round(a)}});
+ A.act.limnuevo=()=>{if(!st().cats.some(x=>!x.lim)){A.toast("Todas tienen límite");return}f(null)};
+ A.act.limedit=b=>f(st().cats.find(x=>x.id===b.dataset.id));
 })();

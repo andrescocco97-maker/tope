@@ -235,3 +235,8 @@ select.chip{appearance:none;padding-right:14px}
 .dr em{font-style:normal;color:var(--mute);font-size:calc(12px*var(--k,1))}
 .tile.ahor{border:1px dashed #F3EBDD66;background:transparent;margin-top:10px}.tile.ahor .d,.tile.ahor .a{color:#F3EBDD}
 .sub{justify-content:flex-start;text-align:left}.sub span{flex:1}.sub.add{justify-content:center}
+
+.lim{display:block;width:100%;text-align:left;padding:8px 0 10px;border-bottom:1px solid var(--line)}
+.lim .lt{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.lim b{font-weight:500;font-size:calc(14px*var(--k,1))}.lim em{font-style:normal;font-size:calc(12.5px*var(--k,1))}
+.lim .lb{display:block;height:6px;border-radius:3px;background:rgba(255,255,255,.08);margin:7px 0 5px;overflow:hidden}.lim .lb i{display:block;height:100%;border-radius:3px}
+.lim .ln{font-size:calc(12px*var(--k,1));color:var(--mute)}

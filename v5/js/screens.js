@@ -98,6 +98,8 @@ A.renderHoy=function(){
  const upH=up.length?up.map((p,i)=>`<button class="tile ${short&&i===0?"warn":""} ${p.date<today?"late":""}" data-a="pago" data-rid="${p.r.id}" data-occ="${p.occ}"><span class="d">${+p.date.slice(8)}</span><span class="m">${A.esc(p.r.name)}<small>${short&&i===0?"Ojo: la plata en pesos no alcanza · ":""}${dayLabel(p.date,today)}</small></span><span class="a">${A.money(p.a)}</span></button>`).join(""):`<div class="note" style="margin:2px 0 8px">No quedan pagos este mes.</div>`;
  const rowL="En qué se va la plata";
  const ahReg=T.ahorroRange(S,r.from,r.to),ahRem=Math.max(0,m.ahorro-ahReg);
+ const mk=today.slice(0,7),by=T.byCat(S,mk+"-01",mk+"-31"),lc=S.cats.filter(c=>c.lim>0);
+ const limH=per==="mes"?`<div class="h3" style="display:flex;justify-content:space-between;align-items:baseline"><span>Límites del mes</span><button class="addl" data-a="limnuevo">+ Definir</button></div>`+(lc.length?lc.map(c=>{const g=by[c.id]||0,p=g/c.lim,col=p>=1?"var(--warn)":p>=.8?"#FFC21A":"#35D07F";return `<button class="lim" data-a="limedit" data-id="${c.id}"><span class="lt"><b>${A.esc(c.n)}</b><em style="color:${p>=1?"var(--warn)":"var(--mute)"}">${p>=1?"te pasaste "+A.money(g-c.lim):"quedan "+A.money(c.lim-g)}</em></span><span class="lb"><i style="width:${Math.min(100,p*100)}%;background:${col}"></i></span><span class="ln">${A.money(g)} de ${A.money(c.lim)}</span></button>`}).join(""):`<div class="note" style="margin:2px 0 8px">Ponele un tope mensual a Súper, Salidas o lo que quieras y te aviso cuando te acerques.</div>`):"";
  const ahT=(per==="mes"&&m.ahorro>0&&ahRem>0)?`<button class="tile ahor" data-a="ahorrar"><span class="d">$</span><span class="m">Ahorro del mes<small>Falta anotar · ${ahReg>0?"ya anotaste "+A.money(ahReg):"todavía no anotaste nada"}</small></span><span class="a">${A.money(ahRem)}</span></button>`:"";
  $h.innerHTML=`<div class="field">
  <div class="fdate"><button data-a="ajustes" aria-label="Fecha y ajustes">${A.dateLong(today)}</button><small>${ru.txt}</small></div>
@@ -111,6 +113,7 @@ A.renderHoy=function(){
  <div class="row2"><span>${rowL}</span></div>
  <div id="dnw"></div>
  ${ahT}
+ ${limH}
  ${av?`<div class="h3">Para confirmar</div>${av}`:""}
  <div class="h3" style="display:flex;justify-content:space-between;align-items:baseline"><span>Próximos pagos</span><button class="addl" data-a="pagonuevo">+ Agregar</button></div>${upH}
  </div>`;
