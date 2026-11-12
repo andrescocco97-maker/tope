@@ -1,6 +1,7 @@
 /* Tope v5 — Análisis: comparación con meses anteriores, categorías, pronóstico y metas */
 (function(){
 const MS=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const kp=n=>{const a=Math.abs(n);return a>=1e6?"$ "+(n/1e6).toFixed(2).replace(".",",")+" M":A.money(n)};
 const ab=n=>{n=Math.round(n);return Math.abs(n)>=1e6?(n/1e6).toFixed(1).replace(".",",")+" M":Math.abs(n)>=1e3?Math.round(n/1e3)+" mil":String(n)};
 const rng=k=>[k+"-01",k+"-31"];
 function ingMes(S,k){return S.mov.filter(m=>m.t==="i"&&T.incomeMonthOf(m.d,m.feeds)===k).reduce((s,m)=>s+m.a,0)}
@@ -23,6 +24,7 @@ A.renderAn=function(box){
  const chart=`<svg viewBox="0 0 ${W} ${H}" class="anc" role="img" aria-label="Gasto y ahorro de los últimos 6 meses">${ay!=null?`<line x1="0" x2="${W}" y1="${ay}" y2="${ay}" stroke="#8B8579" stroke-dasharray="3 4" stroke-width="1"/>`:""}${bars}</svg>`;
  // vitales vs resto
  const [a,b]=rng(k);let vit=0,rest=0;S.mov.forEach(m=>{if((m.t==="g"||m.t==="r")&&m.d>=a&&m.d<=b){const v=(m.t==="r"?-m.a:m.a);if(T.isVital(S,m))vit+=v;else rest+=v}});
+ const Ly={f:0,v:0,d:0};S.mov.forEach(m=>{if((m.t==="g"||m.t==="r")&&m.d>=a&&m.d<=b){const q=(m.t==="r"?-m.a:m.a);if(m.rid)Ly.f+=q;else if(T.isVital(S,m))Ly.v+=q;else Ly.d+=q}});Ly.t=(Ly.f+Ly.v+Ly.d)||1;
  // categorías
  const ent=Object.entries(M.by).filter(e=>e[1]>0).sort((x,y)=>y[1]-x[1]);const tot=ent.reduce((s,e)=>s+e[1],0)||1;
  const cats=ent.map(([id,v])=>{const c=A.cat(id),open=f.open===id,p=P.by[id]||0;
@@ -33,17 +35,18 @@ A.renderAn=function(box){
  // metas
  const goals=S.goals.map(g=>{const t=A.goalTarget(g),sv=T.goalSaved(S,g),p=t>0?Math.min(100,sv/t*100):0,mo=T.goalMonthly(S,g),rem=Math.max(0,t-sv),meses=mo>0?Math.ceil(rem/mo):null;
   return `<div class="angoal"><span class="anh"><b>${A.esc(g.name)}</b><span class="anv">${Math.round(p)}%</span></span><span class="anb"><i style="width:${p}%;background:#F3EBDD"></i></span><small>${p>=100?"Meta cumplida":meses?"Al ritmo actual faltan "+(meses>=12?Math.floor(meses/12)+" a "+(meses%12?meses%12+" m":""):meses+" meses"):"Todavía no hay aportes para estimar"}</small></div>`}).join("");
- const ins=[];
+ const ins=[];const YA=mes(S,T.addM(k,-12));if(YA.gasto>0&&M.gasto>0){const d=Math.round((M.gasto-YA.gasto)/YA.gasto*100);ins.push(`Contra ${A.monthName(T.addM(k,-12))}: gastaste ${Math.abs(d)}% ${d>=0?"más":"menos"}.`)}
  if(P.gasto>0&&M.gasto>0){const top=ent.map(([id,v])=>({id,v,p:P.by[id]||0})).filter(x=>x.p>0&&x.v>x.p).sort((x,y)=>(y.v-y.p)-(x.v-x.p))[0];if(top)ins.push(`${A.cat(top.id).n} fue lo que más subió: ${A.money(top.v-top.p)} más que el mes pasado.`)}
  if(M.ing>0&&M.ahorro>0)ins.push(`Ahorraste el ${Math.round(M.ahorro/M.ing*100)}% de lo que entró.`);
  box.innerHTML=`<div class="anhd"><button class="chip" data-a="mprev" aria-label="Mes anterior">‹</button><span class="chip on" style="min-width:140px;justify-content:center">${A.monthName(k)}</span><button class="chip" data-a="mnext" aria-label="Mes siguiente">›</button></div>
- <div class="ankp"><div><small>Entró</small><b>${A.money(M.ing)}</b>${delta(M.ing,P.ing,false)}</div><div><small>Gastaste</small><b>${A.money(M.gasto)}</b>${delta(M.gasto,P.gasto,true)}</div><div><small>Ahorraste</small><b>${A.money(M.ahorro)}</b>${delta(M.ahorro,P.ahorro,false)}</div></div>
+ <div class="ankp"><div><small>Entró</small><b>${kp(M.ing)}</b>${delta(M.ing,P.ing,false)}</div><div><small>Gastaste</small><b>${kp(M.gasto)}</b>${delta(M.gasto,P.gasto,true)}</div><div><small>Ahorraste</small><b>${kp(M.ahorro)}</b>${delta(M.ahorro,P.ahorro,false)}</div></div>
  ${ins.length?`<div class="anins">${ins.map(x=>`<p>${x}</p>`).join("")}</div>`:""}
  <div class="h3">Últimos 6 meses <span class="lg"><i style="background:#FFC21A"></i>gasto <i style="background:#F3EBDD"></i>ahorro</span></div>${chart}${avg>0?`<div class="note" style="margin:0 0 4px">Línea punteada: tu gasto promedio de los 3 meses anteriores.</div>`:""}
  ${fc}
- ${M.gasto>0?`<div class="h3">Vitales y el resto</div><div class="anvr"><i style="width:${vit/(vit+rest||1)*100}%"></i></div><div class="anrow sm"><span>Vitales</span><b>${A.money(vit)}</b></div><div class="anrow sm"><span>Lo demás</span><b>${A.money(rest)}</b></div>`:""}
+ ${M.gasto>0?`<div class="h3">En qué capa se va</div><div class="anvr" style="display:flex;gap:2px;background:none"><i style="width:${Ly.f/Ly.t*100}%;background:#8B8579"></i><i style="width:${Ly.v/Ly.t*100}%;background:#FF8A00"></i><i style="width:${Ly.d/Ly.t*100}%;background:#FFC21A"></i></div><div class="anrow sm"><span><i class="ldot" style="background:#8B8579"></i>Fijos (los que se repiten)</span><b>${A.money(Ly.f)}</b></div><div class="anrow sm"><span><i class="ldot" style="background:#FF8A00"></i>Vitales variables</span><b>${A.money(Ly.v)}</b></div><div class="anrow sm"><span><i class="ldot" style="background:#FFC21A"></i>Discrecional</span><b>${A.money(Ly.d)}</b></div><div class="note" style="margin-top:4px">Lo vital se marca por detalle en Ajustes › Categorías, con un asterisco.</div>`:""}
  <div class="h3">Por categoría <span class="lg">vs el mes anterior</span></div>${cats||`<div class="empty" style="padding:20px 0">Todavía no hay gastos este mes.</div>`}
- ${goals?`<div class="h3">Metas</div>${goals}`:""}`;
+ ${goals?`<div class="h3">Metas</div>${goals}`:""}
+ ${(k<=cur&&(M.gasto>0||M.ing>0))?`<button class="go ghost" data-a="cierre" data-k="${k}" style="height:46px;margin-top:14px">${(S.cierres||{})[k]?"Mes cerrado · ver cierre":"Cerrar "+A.monthName(k)}</button>`:""}`;
 };
 A.act.anopen=b=>{A.f.open=A.f.open===b.dataset.id?null:b.dataset.id;A.renderMov()};
 A.act.mview=b=>{A.f.view=b.dataset.v;A.renderMov()};

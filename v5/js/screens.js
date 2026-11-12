@@ -115,6 +115,7 @@ A.renderHoy=function(){
  <div class="below">
  <div class="row2"><span>${rowL}</span></div>
  <div id="dnw"></div>
+ ${A.avisosHoy?A.avisosHoy():""}
  ${ahT}
  ${limH}
  ${av?`<div class="h3">Para confirmar</div>${av}`:""}

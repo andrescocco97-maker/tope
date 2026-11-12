@@ -84,6 +84,7 @@ A.act.cback=()=>{D.pick=false;D.c=null;D.s=null;redraw()};
 A.act.csub=b=>{D.s=b.dataset.id;if(A.parseAmt(D.amt)>0){A.act.csave();return}redraw()};
 A.act.subnew=()=>{const keep={...D},c=A.cat(D.c);
  A.form("Nuevo detalle en "+c.n,[{k:"n",label:"Nombre",type:"text",v:"",ph:"Perfumería, flores…"}],{save:v=>{const n=v.n.trim();if(!n)return false;c.subs=c.subs||[];const id=c.id+"."+T.uid();c.subs.push({id,n});keep.s=id;keep.pick=true;setTimeout(()=>{A.openCarga();Object.assign(D,keep);drawCarga()},320)}})};
+A.ahorrarMonto=v=>{A.openCarga();D.sp="a";D.amt=String(Math.max(0,Math.round(v)));drawCarga()};
 A.act.ahorrar=()=>{const k=A.today().slice(0,7),m=T.calc(A.S,k,A.today()).ahorro,reg=T.ahorroRange(A.S,k+"-01",k+"-31");A.openCarga();D.sp="a";D.amt=String(Math.max(0,Math.round(m-reg)));drawCarga()};
 document.addEventListener("change",e=>{if(e.target.id==="cd"&&D){D.d=e.target.value||A.today();redraw()}});
 document.addEventListener("input",e=>{if(!D)return;if(e.target.id==="dn"||e.target.id==="dnote")D.note=e.target.value;if(e.target.id==="du"){D.u=e.target.value}});
@@ -91,12 +92,13 @@ function limMsg(m,st){const c=m.t==="g"&&st.cats.find(x=>x.id===m.c);if(!c||!(c.
  if(b<c.lim&&g>=c.lim)return c.n+": te pasaste del límite";if(b<c.lim*.8&&g>=c.lim*.8)return c.n+": ya usaste el "+Math.round(g/c.lim*100)+"% del límite";return null}
 function commit(m,msg){const st=A.S;st.mov.push(m);msg=limMsg(m,st)||msg;A.persist();A.close();A.render();A.buzz(18);A.toast(msg||"Anotado",()=>{st.mov=st.mov.filter(x=>x.id!==m.id);A.persist();A.render()})}
 A.act.csave=()=>{const st=A.S,v=A.parseAmt(D.amt);if(!(v>0))return;const t=D.t,fx=st.cfg.fx||1;
- if(t==="i"){const r=D.rid&&st.rec.find(x=>x.id===D.rid);commit(r?{id:T.uid(),t:"i",a:Math.round(v),d:D.d,note:r.name,rid:r.id,occ:D.occ,feeds:r.feeds||"cur"}:{id:T.uid(),t:"i",a:Math.round(v),d:D.d,note:D.note.trim()||undefined,feeds:D.next?"next":"cur"});return}
+ if(t==="i"){const r=D.rid&&st.rec.find(x=>x.id===D.rid);commit(r?{id:T.uid(),t:"i",a:Math.round(v),d:D.d,note:r.name,rid:r.id,occ:D.occ,feeds:r.feeds||"cur"}:{id:T.uid(),t:"i",a:Math.round(v),d:D.d,note:D.note.trim()||undefined,feeds:D.next?"next":"cur"});if(!r)setTimeout(()=>A.bigIncome&&A.bigIncome(Math.round(v)),500);return}
  if(D.sp==="a"){const u=A.parseAmt(D.u);commit({id:T.uid(),t:"a",a:Math.round(v),u:u||undefined,fx:u?v/u:undefined,goal:D.goal||undefined,d:D.d},"Ahorro anotado");return}
  if(D.sp==="d"){commit({id:T.uid(),t:"d",a:Math.round(v),d:D.d,note:D.note.trim()||undefined});return}
- if(!D.c)return;
+ if(!D.c){const rl=A.ruleFor&&A.ruleFor(D.note);if(rl){D.c=rl.c;D.s=rl.s}}
+ if(!D.c){const rl=A.ruleFor&&A.ruleFor(D.note);if(rl){D.c=rl.c;D.s=rl.s}}if(!D.c)return;
  if(D.cu){const k=A.today().slice(0,7);const tot=Math.round(D.usd?v*fx:v);const sp={id:T.uid(),name:D.note.trim()||A.cat(D.c).n,total:tot,n:D.n,start:T.addM(k,1),c:D.c};st.spr.push(sp);A.persist();A.close();A.render();A.buzz(18);A.toast("Repartido en "+D.n+" cuotas",()=>{st.spr=st.spr.filter(x=>x!==sp);A.persist();A.render()});return}
- const m={id:T.uid(),t:"g",a:Math.round(D.usd?v*fx:v),c:D.c,d:D.d,note:D.note.trim()||undefined};if(D.s&&D.s!=="_")m.s=D.s;if(D.usd){m.u=v;m.fx=fx;if(D.pu)m.pu=true}commit(m)};
+ const m={id:T.uid(),t:"g",a:Math.round(D.usd?v*fx:v),c:D.c,d:D.d,note:D.note.trim()||undefined};if(D.s&&D.s!=="_")m.s=D.s;if(D.usd){m.u=v;m.fx=fx;if(D.pu)m.pu=true}commit(m,A.learn&&A.learn(m))};
 A.act.newcat=()=>catForm(null,true);
 
 /* ===== formulario genérico ===== */
@@ -169,10 +171,10 @@ A.act.inv=b=>invForm(b.dataset.id);A.act.invnew=()=>invForm(null);
 function invForm(id){listForm(S().inv,id,id?"Inversión":"Nueva inversión",it=>[{k:"name",label:"Nombre",type:"text",v:it?it.name:"",ph:"Bitcoin, S&P 500, Nexo…"},{k:"cur",label:"Moneda",type:"select",v:it?it.cur:"USD",opts:[["USD","Dólares"],["ARS","Pesos"]]},{k:"v",label:"Cuánto vale hoy",type:"num",v:it?String(it.v):""}],v=>v.name.trim()&&A.parseAmt(v.v)>=0?{name:v.name.trim(),cur:v.cur,v:A.parseAmt(v.v)}:null)}
 A.act.debt=b=>debtForm(b.dataset.id);A.act.debtnew=()=>debtForm(null);
 function debtForm(id){listForm(S().debts,id,id?"Deuda":"Nueva deuda",it=>[{k:"name",label:"¿A quién o qué?",type:"text",v:it?it.name:"",ph:"Tarjeta, préstamo…"},{k:"cur",label:"Moneda",type:"select",v:it?it.cur:"ARS",opts:[["ARS","Pesos"],["USD","Dólares"]]},{k:"a",label:"Cuánto debés",type:"num",v:it?String(it.a):""}],v=>v.name.trim()&&A.parseAmt(v.a)>0?{name:v.name.trim(),cur:v.cur,a:A.parseAmt(v.a)}:null)}
-A.act.controlusd=()=>{const st=S(),bx=T.boxes(st);
+A.act.controlusd=()=>{const st=S(),bx=T.boxes(st);st.ui.ctl=A.today();
  A.form("Control de dólares",[{type:"note",label:"En la app figuran USD "+A.fmt2(bx.usd)+". Contá cuántos dólares hay de verdad."},{k:"r",label:"Cuántos dólares tenés hoy",type:"num",v:""}],
   {ok:"Registrar",save:v=>{if(v.r==="")return false;const r=A.parseAmt(v.r);const diff=Math.round((r-bx.usd)*100)/100;if(diff===0){A.toast("Está todo al día");return}st.init.usd=Math.round(((st.init.usd||0)+diff)*100)/100;A.toast("Dólares corregidos")}})};
-A.act.control=()=>{const st=S(),bx=T.boxes(st);
+A.act.control=()=>{const st=S(),bx=T.boxes(st);st.ui.ctl=A.today();
  A.form("Control de pesos",[{type:"note",label:"En la app figuran "+A.money(bx.ars)+" en pesos. Contá cuánto hay de verdad (cuenta, billetera, efectivo)."},{k:"r",label:"Cuánto tenés hoy",type:"num",v:""}],
   {ok:"Registrar",save:v=>{const r=A.parseAmt(v.r);if(!(v.r!==""))return false;const diff=Math.round(r-bx.ars);if(diff===0){A.toast("Está todo al día");return}
    if(diff<0)st.mov.push({id:T.uid(),t:"g",a:-diff,c:"otros",d:A.today(),note:"Gasto sin detalle"});else st.mov.push({id:T.uid(),t:"aj",a:diff,d:A.today(),note:"Ajuste de control"});A.toast(diff<0?"Quedó como gasto sin detalle":"Ajuste registrado, no cuenta como ingreso")}})};
@@ -211,8 +213,8 @@ function catForm(id,fromCarga){const st=S();const c=id?st.cats.find(x=>x.id===id
  const extra=c?[{i:0,t:"Borrar categoría",cls:"red",f:()=>{if(st.mov.some(m=>m.c===c.id)){A.toast("Tiene movimientos: no se puede borrar");return}st.cats=st.cats.filter(x=>x!==c);A.persist();A.close();A.render()}}]:[];
  A.form(c?"Categoría":"Nueva categoría",[{k:"n",label:"Nombre",type:"text",v:c?c.n:""},{k:"c",label:"Color",type:"select",v:c?c.c:PAL[0],opts:PAL.map((p,i)=>[p,["Amarillo","Verde agua","Rosa","Rojo","Verde","Naranja","Azul","Violeta","Lima","Marrón"][i]])},
   {k:"ic",label:"Ícono",type:"select",v:c?c.ic:"dots",opts:["cart","fuel","glass","car","bag","heart","home","plus","bolt","paw","book","gym","tv","wifi","cut","gift","coin","dots"].map(x=>[x,{cart:"Carrito",fuel:"Surtidor",glass:"Copa",car:"Auto",bag:"Bolsa",heart:"Corazón",home:"Casa",plus:"Cruz",bolt:"Rayo",paw:"Huella",book:"Libro",gym:"Pesas",tv:"Pantalla",wifi:"Wifi",cut:"Tijera",gift:"Regalo",coin:"Moneda",dots:"Puntos"}[x]])},
-  {k:"subs",label:"Detalles (separados por coma)",type:"text",v:c?(c.subs||[]).map(x=>x.n).join(", "):"",ph:"Ropa, perfumería, tecnología…"},{k:"lim",label:"Límite mensual (opcional)",type:"num",v:c&&c.lim?String(c.lim):""},{k:"v",label:"Es un gasto vital",type:"switch",v:c?!!c.v:false}],
-  {extra,full:true,save:v=>{if(!v.n.trim())return false;const nm=(v.subs||"").split(",").map(x=>x.trim()).filter(Boolean),old=(c&&c.subs)||[],cid=c?c.id:"c"+T.uid();const subs=nm.map(n=>{const e=old.find(x=>x.n.toLowerCase()===n.toLowerCase());return e||{id:cid+"."+T.uid(),n}});const o={n:v.n.trim(),c:v.c,ic:v.ic,subs,lim:A.parseAmt(v.lim)||undefined,v:v.v?1:undefined};if(c)Object.assign(c,o);else{const nc=Object.assign({id:cid},o);st.cats.push(nc);if(prev)setTimeout(()=>{A.openCarga();D.c=nc.id;D.more=true;drawCarga()},320)}}})}
+  {k:"subs",label:"Detalles, separados por coma. Con * los que son vitales",type:"text",v:c?(c.subs||[]).map(x=>x.n+(x.v?"*":"")).join(", "):"",ph:"Alquiler*, Expensas*, Ropa…"},{k:"lim",label:"Límite mensual (opcional)",type:"num",v:c&&c.lim?String(c.lim):""},{k:"v",label:"Es un gasto vital",type:"switch",v:c?!!c.v:false}],
+  {extra,full:true,save:v=>{if(!v.n.trim())return false;const nm=(v.subs||"").split(",").map(x=>x.trim()).filter(Boolean).map(x=>({n:x.replace(/\*+$/,"").trim(),v:/\*$/.test(x)})).filter(x=>x.n),old=(c&&c.subs)||[],cid=c?c.id:"c"+T.uid();const subs=nm.map(q=>{const e=old.find(x=>x.n.toLowerCase()===q.n.toLowerCase());if(e){e.v=q.v?1:undefined;return e}return {id:cid+"."+T.uid(),n:q.n,v:q.v?1:undefined}});const o={n:v.n.trim(),c:v.c,ic:v.ic,subs,lim:A.parseAmt(v.lim)||undefined,v:v.v?1:undefined};if(c)Object.assign(c,o);else{const nc=Object.assign({id:cid},o);st.cats.push(nc);if(prev)setTimeout(()=>{A.openCarga();D.c=nc.id;D.more=true;drawCarga()},320)}}})}
 A.act.cat=b=>{A._back=true;catForm(b.dataset.id)};A.act.catnew=()=>{A._back=true;catForm(null)};
 
 /* ===== ajustes ===== */
@@ -226,8 +228,9 @@ A.act.ajustes=()=>{const st=S();
  <div class="h3">Gastos anuales</div>${st.rec.filter(r=>r.kind==="anual").map(recRow).join("")}<button class="go ghost" data-a="recnew" data-k="anual" style="height:46px;margin-top:0">+ Gasto anual</button>
  <div class="h3">Cuotas</div>${st.spr.filter(x=>!x.ended).map(x=>`<button class="tile" data-a="cuota" data-id="${x.id}"><span class="m">${A.esc(x.name)}<small>${x.n} cuotas · desde ${A.monthName(x.start)}</small></span><span class="a" style="color:var(--cream)">$ ${A.fmt(Math.round(x.total/x.n))}</span></button>`).join("")||`<div class="note" style="margin:0 0 6px">Se cargan desde el + con el botón Cuotas.</div>`}
  <div class="h3">Categorías</div><div class="chips" style="margin-top:0">${st.cats.map(c=>`<button class="chip" data-a="cat" data-id="${c.id}"><i style="width:8px;height:8px;border-radius:4px;background:${c.c}"></i>${A.esc(c.n)}</button>`).join("")}<button class="chip" data-a="catnew">+ Nueva</button></div>
+ ${A.rulesHtml()}
  <div class="h3">Respaldo</div><div class="two"><button class="go ghost" data-a="export" style="margin:0;height:46px">Exportar todo</button><label class="go ghost" style="margin:0;height:46px;line-height:46px;display:block;cursor:pointer">Importar<input type="file" id="imp" accept=".json,application/json" hidden></label></div>
- <div class="note" style="text-align:center;margin-top:16px">Tope v5 · versión 10</div><button class="go red" data-a="reset" style="margin-top:22px;height:46px">Borrar todo y empezar de nuevo</button></div>`,{part:true,onClose:saveAjustes});};
+ <div class="note" style="text-align:center;margin-top:16px">Tope v5 · versión 11</div><button class="go red" data-a="reset" style="margin-top:22px;height:46px">Borrar todo y empezar de nuevo</button></div>`,{part:true,onClose:saveAjustes});};
 document.addEventListener("input",e=>{if(e.target.id==="as"||e.target.id==="afx")saveAjustes(true)});
 function saveAjustes(quiet){const st=S(),a=A.$("#as"),f=A.$("#afx");if(a){const v=Math.round(A.parseAmt(a.value));if(v>=0&&v<=90)st.cfg.savePct=v}if(f){const v=A.parseAmt(f.value);if(v>0&&v!==st.cfg.fx){st.cfg.fx=v;st.cfg.fxAuto=false}}A.persist();if(!quiet)A.render()}
 A.act.fxget=async b=>{const n=A.$("#fxn");n.textContent="Buscando…";const v=await A.fetchFx(true);if(v){A.$("#afx").value=String(v);n.textContent="Dólar MEP de hoy: $ "+A.fmt(v)+". Se actualiza solo al abrir la app."}else n.textContent="No pude traerlo (¿sin señal?). Cargalo a mano."};
