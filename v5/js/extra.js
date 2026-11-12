@@ -63,4 +63,19 @@ A.act.csv=()=>{const st=S(),q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"'
 /* ---- aviso de respaldo ---- */
 A.bkAviso=()=>{const st=S(),l=st.ui.bk||st.ui.bk0;if(!st.ui.bk0)st.ui.bk0=A.today();if(st.mov.length<5)return "";const dd=Math.round((new Date(A.today())-new Date(l))/864e5);
  return dd>=30?`<button class="tile" data-a="export"><span class="d">↓</span><span class="m">Hacé un respaldo<small>Hace ${dd} días que no guardás una copia</small></span></button>`:""};
+
+/* ---- bloqueo con PIN (pantalla de privacidad, no cifra los datos) ---- */
+const hash=p=>{let h=2166136261;const t="tope:"+p;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)}return String(h>>>0)};
+let LK="",lockedAt=0;
+function lockUI(msg){let el=document.getElementById("lock");if(!el){el=document.createElement("div");el.id="lock";document.body.appendChild(el)}
+ el.innerHTML=`<div class="lk"><div class="lkt">Tope</div><div class="lkm">${msg||"Poné tu PIN"}</div><div class="lkd">${[0,1,2,3].map(i=>`<i class="${i<LK.length?"on":""}"></i>`).join("")}</div>
+ <div class="pad4 lkp">${["1","2","3","4","5","6","7","8","9","","0","⌫"].map(k=>k===""?"<span></span>":`<button data-a="lkkey" data-k="${k}">${k}</button>`).join("")}</div></div>`;el.classList.add("on")}
+A.lock=()=>{if(!S().cfg.pin)return;LK="";lockUI()};
+A.act.lkkey=b=>{const k=b.dataset.k;if(k==="⌫")LK=LK.slice(0,-1);else if(LK.length<4)LK+=k;
+ if(LK.length===4){if(hash(LK)===S().cfg.pin){document.getElementById("lock").classList.remove("on");LK="";return}LK="";lockUI("PIN incorrecto");try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}return}lockUI()};
+document.addEventListener("visibilitychange",()=>{if(document.hidden)lockedAt=Date.now();else if(S().cfg.pin&&lockedAt&&Date.now()-lockedAt>60000)A.lock()});
+A.pinHtml=()=>`<div class="h3">Seguridad</div><button class="go ghost" data-a="pinset" style="height:46px;margin-top:0">${S().cfg.pin?"Cambiar o quitar el PIN":"Bloquear la app con un PIN"}</button><div class="note">Pide el PIN al abrir y cuando volvés después de un minuto. Es una pantalla de privacidad: no cifra los datos.</div>`;
+A.act.pinset=()=>{const st=S();A.form("PIN de 4 números",[{k:"p",label:"Nuevo PIN",type:"num",v:"",ph:"1234"}],{ok:"Guardar",extra:st.cfg.pin?[{i:0,t:"Quitar el PIN",cls:"red",f:()=>{delete st.cfg.pin;A.persist();A.close();A.toast("PIN quitado")}}]:[],
+ save:v=>{const p=String(v.p||"").replace(/\D/g,"");if(p.length!==4){A.toast("Tiene que tener 4 números");return false}st.cfg.pin=hash(p);A.toast("PIN activado")}})};
+if(S().cfg&&S().cfg.pin)setTimeout(A.lock,0);
 })();
