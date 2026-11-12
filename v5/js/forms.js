@@ -11,10 +11,15 @@ const TYPES=[["e","Egreso"],["i","Ingreso"]];
 function amtView(){const s=D.amt;if(!s)return `<span class="ph">0</span>`;const [i,d]=s.split(",");return A.fmt(+i||0)+(s.includes(",")?","+(d||""):"")}
 const catBtn=c=>`<button class="cat ${D.c===c.id?"on":""}" data-a="ccat" data-id="${c.id}" style="--c:${c.c}">${A.catSvg(c)}<span>${A.esc(c.n)}</span></button>`;
 const spBtn=(s,n,ic,col)=>`<button class="cat ${D.sp===s?"on":""}" data-a="csp" data-s="${s}" style="--c:${col}"><svg viewBox="0 0 24 24"><path d="${A.P[ic]}"/></svg><span>${n}</span></button>`;
+const AHC="#F3EBDD";
 function catGrid(){
- const cs=A.S.cats;
- if(!D.more)return `<div class="grid4">${cs.slice(0,6).map(catBtn).join("")}${spBtn("a","Ahorro","coin","#F0C25A")}<button class="cat more" data-a="cmore"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Más</span></button></div>`;
- return `<div class="grid4">${cs.map(catBtn).join("")}${spBtn("a","Ahorro","coin","#F0C25A")}${spBtn("d","Me deben","owe","#7C8AA5")}<button class="cat more" data-a="newcat"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Nueva</span></button></div>`}
+ const cs=T.catOrder(A.S);
+ if(!D.more)return `<div class="grid4">${cs.slice(0,6).map(catBtn).join("")}${spBtn("a","Ahorro","coin",AHC)}<button class="cat more" data-a="cmore"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Más</span></button></div>`;
+ return `<div class="grid4">${cs.map(catBtn).join("")}${spBtn("a","Ahorro","coin",AHC)}${spBtn("d","Me deben","owe","#9CA3AF")}<button class="cat more" data-a="newcat"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Nueva</span></button></div>`}
+function pickView(v){const c=A.cat(D.c),subs=c.subs||[];
+ return `<div class="lbl" style="display:flex;align-items:center;gap:8px"><span class="pk" style="--c:${c.c}">${A.catSvg(c)}</span><span style="flex:1;color:var(--cream);font-size:calc(16px*var(--k,1))">${A.esc(c.n)}</span><button class="addl" data-a="cback">Cambiar</button></div>
+ ${subs.length?`<div class="lbl" style="margin-top:4px">¿Qué fue?</div><div class="grid3">${subs.map((x,i)=>`<button class="sub ${D.s===x.id?"on":""}" data-a="csub" data-id="${x.id}" style="--c:${A.subc(c.c,i,subs.length)}"><i></i><span>${A.esc(x.n)}</span></button>`).join("")}<button class="sub ${D.s==="_"?"on":""}" data-a="csub" data-id="_" style="--c:#9CA3AF"><i></i><span>Sin detalle</span></button><button class="sub add" data-a="subnew"><span>+ Nueva</span></button></div>`:`<button class="sub add" data-a="subnew" style="margin-top:4px"><span>+ Agregar detalle (ej. perfumería)</span></button>`}
+ <button class="go" data-a="csave" ${v>0?"":"disabled"}>Guardar</button>`}
 const BKS='<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h11a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7 6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg>';
 const keypad=`<div class="pad4">${["1","2","3","4","5","6","7","8","9",",","0","bk"].map(k=>k==="bk"?`<button data-a="key" data-k="⌫" class="bk" aria-label="Borrar">${BKS}</button>`:`<button data-a="key" data-k="${k}" aria-label="${k}">${k}</button>`).join("")}</div>`;
 function drawCarga(){
@@ -27,8 +32,8 @@ function drawCarga(){
    body+=`<div class="stepper"><button data-a="cn" data-d="-1" aria-label="Menos cuotas">−</button><b>${n}</b><button data-a="cn" data-d="1" aria-label="Más cuotas">+</button><span class="note" style="margin:0;flex:1">${v>0?"cuotas de $ "+A.fmt(cu)+", desde "+A.monthName(T.addM(A.today().slice(0,7),1)):"Cargá el total arriba"}</span></div>
    <label class="fld"><span>¿Qué es?</span><input id="dn" placeholder="Heladera, ropa…" value="${A.esc(D.note)}" autocomplete="off"></label>
    <div class="lbl">Elegí la categoría para guardar</div>`}
-  else{const us=T.usual(st,3);body+=`<div class="lbl">Tus más usados</div><div class="grid3">${us.map(u=>{const c=A.cat(u.c);return `<button class="fav ${D.c===u.c?"on":""}" data-a="cfav" data-id="${u.c}" data-a2="${u.a}" style="--c:${c.c}">${A.catSvg(c)}<b>${A.esc(c.n)}</b><small>${u.a?"$ "+A.fmt(u.a):"—"}</small></button>`}).join("")}</div><div class="lbl">Categorías</div>`}
-  body+=catGrid();
+  else if(D.pick&&D.c)body+=pickView(v);
+  if(!(D.pick&&D.c&&!D.cu))body+=catGrid();
  }else if(t==="e"&&D.sp==="a"){
   body+=`<div class="lbl">Ahorro <button class="addl" data-a="csp" data-s="">Cambiar</button></div>
   <label class="fld" style="margin-top:0"><span>Dólares que recibiste (opcional)</span><input id="du" inputmode="decimal" placeholder="0" value="${A.esc(D.u)}" autocomplete="off"></label>
@@ -43,19 +48,20 @@ function drawCarga(){
   body+=`<label class="fld"><span>¿De qué es?</span><input id="dn" placeholder="Sueldo, guardia, venta…" value="${A.esc(D.note)}" autocomplete="off"></label>
   <button class="sw ${D.next?"on":""}" data-a="cnext"><span>Es para el mes que viene</span><i></i></button><button class="go" data-a="csave" ${v>0?"":"disabled"}>Guardar ingreso</button>`;
  }
- const noteRow=(t==="e"&&!D.sp&&D.det&&!D.cu)?`<label class="fld" style="margin-top:8px"><span>Nota</span><input id="dnote" placeholder="Opcional" value="${A.esc(D.note)}" autocomplete="off"></label>`:"";
- const chips=`<label class="chip" style="position:relative">${dl}<input type="date" id="cd" value="${D.d}" style="position:absolute;inset:0;opacity:0;width:100%" aria-label="Fecha"></label>`+(t==="e"&&!D.sp?`<button class="chip ${D.usd?"on":""}" data-a="cusd">USD</button><button class="chip ${D.cu?"on":""}" data-a="ccu">Cuotas</button>${D.cu?"":`<button class="chip ${D.det?"on":""}" data-a="cdet">Nota</button>`}`:"");
+ const noteRow="";
+ const noteIn=(t==="e"&&!D.sp&&!D.cu)?`<input class="nin" id="dnote" placeholder="Nota (opcional)" value="${A.esc(D.note)}" autocomplete="off" aria-label="Nota">`:"";
+ const chips=`<label class="chip" style="position:relative">${dl}<input type="date" id="cd" value="${D.d}" style="position:absolute;inset:0;opacity:0;width:100%" aria-label="Fecha"></label>`+(t==="e"&&!D.sp?`<button class="chip ${D.usd?"on":""}" data-a="cusd">USD</button><button class="chip ${D.cu?"on":""}" data-a="ccu">Cuotas</button>`:"");
  setSheet(`<div class="ctop"><div class="sh-head" style="padding:calc(var(--safe-t) + 4px) 0 0"><div class="chips" style="margin:0;align-items:center">${chips}</div><button class="xbtn" data-a="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="${A.P.x}"/></svg></button></div>
  <div class="tcs">${TYPES.map(x=>`<button class="${t===x[0]?"on":""}" data-a="ctype" data-t="${x[0]}">${x[1]}</button>`).join("")}</div>
- <div class="amt"><div><span class="cur">${D.usd&&t==="e"?"USD":"$"}</span>${amtView()}</div></div></div><div class="cmid">${noteRow}${body}</div><div class="ckeys">${keypad}</div>`);
+ <div class="amt"><div><span class="cur">${D.usd&&t==="e"?"USD":"$"}</span>${amtView()}</div></div>${noteIn}</div><div class="cmid">${noteRow}${body}</div><div class="ckeys">${keypad}</div>`);
 }
-A.openCarga=function(){D={t:"e",sp:null,amt:"",usd:false,pu:false,c:null,d:A.today(),note:"",n:3,cu:false,u:"",goal:null,next:false,more:false,det:false,rid:null,occ:null};A.sheet("",{cls:"carga"});drawCarga()};
+A.openCarga=function(){D={s:null,pick:false,t:"e",sp:null,amt:"",usd:false,pu:false,c:null,d:A.today(),note:"",n:3,cu:false,u:"",goal:null,next:false,more:false,det:false,rid:null,occ:null};A.sheet("",{cls:"carga"});drawCarga()};
 A.act.fabopen=A.openCarga;
 A.act.key=b=>{const k=b.dataset.k;let s=D.amt;
  if(k==="⌫")s=s.slice(0,-1);else if(k===","){if(!s.includes(","))s=(s||"0")+","}else{const [i,d]=s.split(",");if(s.includes(",")){if((d||"").length<2)s+=k}else if(i.length<8&&!(i===""&&k==="0"))s+=k}
  D.amt=s;keepScroll(drawCarga)};
 const redraw=()=>keepScroll(drawCarga);
-A.act.ctype=b=>{D.t=b.dataset.t;D.c=null;D.sp=null;redraw()};
+A.act.ctype=b=>{D.t=b.dataset.t;D.c=null;D.sp=null;D.pick=false;D.s=null;redraw()};
 A.act.csp=b=>{D.sp=b.dataset.s||null;redraw()};
 A.act.cusd=()=>{D.usd=!D.usd;if(!D.usd)D.pu=false;redraw()};
 A.act.cpu=()=>{D.pu=!D.pu;redraw()};
@@ -66,8 +72,16 @@ A.act.cmore=()=>{D.more=true;redraw()};
 A.act.cnext=()=>{D.next=!D.next;redraw()};
 A.act.cgoal=b=>{D.goal=D.goal===b.dataset.id?null:b.dataset.id;redraw()};
 A.act.cn=b=>{D.n=Math.max(2,Math.min(60,D.n+(+b.dataset.d)));redraw()};
-A.act.cfav=b=>{const id=b.dataset.id;if(A.parseAmt(D.amt)>0){D.c=id;A.act.csave();return}const a=+b.dataset.a2;D.c=id;if(a>0){D.amt=String(a);A.act.csave();return}redraw()};
-A.act.ccat=b=>{D.c=b.dataset.id;if(A.parseAmt(D.amt)>0){A.act.csave();return}redraw()};
+A.act.ccat=b=>{const c=A.cat(b.dataset.id);D.c=c.id;D.s=null;const v=A.parseAmt(D.amt);
+ if(D.cu){if(v>0)A.act.csave();else redraw();return}
+ if(c.subs&&c.subs.length){D.pick=true;if(!(v>0)){const a=T.typical(A.S,c.id);if(a)D.amt=String(a)}redraw();return}
+ if(v>0){A.act.csave();return}
+ const a=T.typical(A.S,c.id);if(a){D.amt=String(a);D.pick=true}redraw()};
+A.act.cback=()=>{D.pick=false;D.c=null;D.s=null;redraw()};
+A.act.csub=b=>{D.s=b.dataset.id;if(A.parseAmt(D.amt)>0){A.act.csave();return}redraw()};
+A.act.subnew=()=>{const keep={...D},c=A.cat(D.c);
+ A.form("Nuevo detalle en "+c.n,[{k:"n",label:"Nombre",type:"text",v:"",ph:"Perfumería, flores…"}],{save:v=>{const n=v.n.trim();if(!n)return false;c.subs=c.subs||[];const id=c.id+"."+T.uid();c.subs.push({id,n});keep.s=id;keep.pick=true;setTimeout(()=>{A.openCarga();Object.assign(D,keep);drawCarga()},320)}})};
+A.act.ahorrar=()=>{const k=A.today().slice(0,7),m=T.calc(A.S,k,A.today()).ahorro,reg=T.ahorroRange(A.S,k+"-01",k+"-31");A.openCarga();D.sp="a";D.amt=String(Math.max(0,Math.round(m-reg)));drawCarga()};
 document.addEventListener("change",e=>{if(e.target.id==="cd"&&D){D.d=e.target.value||A.today();redraw()}});
 document.addEventListener("input",e=>{if(!D)return;if(e.target.id==="dn"||e.target.id==="dnote")D.note=e.target.value;if(e.target.id==="du"){D.u=e.target.value}});
 function commit(m,msg){const st=A.S;st.mov.push(m);A.persist();A.close();A.render();A.buzz(18);A.toast(msg||"Anotado",()=>{st.mov=st.mov.filter(x=>x.id!==m.id);A.persist();A.render()})}
@@ -77,7 +91,7 @@ A.act.csave=()=>{const st=A.S,v=A.parseAmt(D.amt);if(!(v>0))return;const t=D.t,f
  if(D.sp==="d"){commit({id:T.uid(),t:"d",a:Math.round(v),d:D.d,note:D.note.trim()||undefined});return}
  if(!D.c)return;
  if(D.cu){const k=A.today().slice(0,7);const tot=Math.round(D.usd?v*fx:v);const sp={id:T.uid(),name:D.note.trim()||A.cat(D.c).n,total:tot,n:D.n,start:T.addM(k,1),c:D.c};st.spr.push(sp);A.persist();A.close();A.render();A.buzz(18);A.toast("Repartido en "+D.n+" cuotas",()=>{st.spr=st.spr.filter(x=>x!==sp);A.persist();A.render()});return}
- const m={id:T.uid(),t:"g",a:Math.round(D.usd?v*fx:v),c:D.c,d:D.d,note:D.note.trim()||undefined};if(D.usd){m.u=v;m.fx=fx;if(D.pu)m.pu=true}commit(m)};
+ const m={id:T.uid(),t:"g",a:Math.round(D.usd?v*fx:v),c:D.c,d:D.d,note:D.note.trim()||undefined};if(D.s&&D.s!=="_")m.s=D.s;if(D.usd){m.u=v;m.fx=fx;if(D.pu)m.pu=true}commit(m)};
 A.act.newcat=()=>catForm(null,true);
 
 /* ===== formulario genérico ===== */
@@ -102,12 +116,14 @@ A.act.fx=b=>{const x=F.o.extra[+b.dataset.i];x.f(fvals())};
 A.act.edit=b=>{const st=S(),m=st.mov.find(x=>x.id===b.dataset.id);if(!m)return;
  const f=[{k:"a",label:"Monto en pesos",type:"num",v:A.fmt2(m.a).replace(/\./g,"")},];
  if(m.t==="g"||m.t==="r")f.push({k:"c",label:"Categoría",type:"select",v:m.c,opts:st.cats.map(c=>[c.id,c.n])});
+ const cc=m.c&&st.cats.find(x=>x.id===m.c);
+ if(m.t==="g"&&cc&&cc.subs&&cc.subs.length)f.push({k:"s",label:"Detalle",type:"select",v:m.s||"",opts:[["","Sin detalle"]].concat(cc.subs.map(x=>[x.id,x.n]))});
  f.push({k:"d",label:"Fecha",type:"date",v:m.d},{k:"note",label:"Nota",type:"text",v:m.note||""});
  if(m.t==="g")f.push({k:"tag",label:"Etiqueta (viaje, mudanza…)",type:"text",v:m.tag||""});
  const extra=[];
  if(m.t==="d"&&!m.closed)extra.push({i:0,t:"Marcar como cobrado",cls:"",f:()=>{m.closed=true;st.mov.push({id:T.uid(),t:"dc",a:m.a,d:A.today(),note:m.note,ref:m.id});A.persist();A.close();A.render();A.toast("Cobrado")}});
  extra.push({i:extra.length,t:"Borrar",cls:"red",f:()=>{const i=st.mov.indexOf(m);st.mov.splice(i,1);A.persist();A.close();A.render();A.toast("Borrado",()=>{st.mov.splice(Math.min(i,st.mov.length),0,m);A.persist();A.render()})}});
- A.form("Movimiento",f,{extra,save:v=>{const a=A.parseAmt(v.a);if(!(a>0)&&m.t!=="aj")return false;m.a=Math.round(m.t==="aj"?A.parseAmt(v.a):a);if(v.c)m.c=v.c;m.d=v.d||m.d;m.note=v.note||undefined;if(m.t==="g")m.tag=v.tag||undefined;m.u=m.u&&m.fx?m.a/m.fx:m.u}})};
+ A.form("Movimiento",f,{extra,save:v=>{const a=A.parseAmt(v.a);if(!(a>0)&&m.t!=="aj")return false;m.a=Math.round(m.t==="aj"?A.parseAmt(v.a):a);if(v.c&&v.c!==m.c){m.c=v.c;m.s=undefined}else if(v.s!==undefined)m.s=v.s||undefined;m.d=v.d||m.d;m.note=v.note||undefined;if(m.t==="g")m.tag=v.tag||undefined;m.u=m.u&&m.fx?m.a/m.fx:m.u}})};
 
 /* ===== confirmar pagos y cobros ===== */
 A.act.pago=b=>{const st=S(),r=st.rec.find(x=>x.id===b.dataset.rid);if(!r)return;const occ=b.dataset.occ;
@@ -186,14 +202,14 @@ A.act.cuota=b=>{const st=S(),x=st.spr.find(y=>y.id===b.dataset.id);if(!x)return;
   {ok:"Guardar",extra:[{i:0,t:"Ya terminé de pagarlas",cls:"ghost",f:()=>{x.ended=true;A.persist();A.close();A.render();A._back=false;setTimeout(A.act.ajustes,340)}},{i:1,t:"Borrar",cls:"red",f:()=>{st.spr=st.spr.filter(y=>y!==x);A.persist();A.close();A.render();A._back=false;setTimeout(A.act.ajustes,340)}}],
   save:v=>{const t=A.parseAmt(v.total),n=Math.round(A.parseAmt(v.n));if(!v.name.trim()||!(t>0)||!(n>=1))return false;Object.assign(x,{name:v.name.trim(),total:Math.round(t),n})}})};
 /* ===== categorías ===== */
-const PAL=["#E8AA2A","#3FA89B","#C2455E","#7C8AA5","#5FAE72","#D98B4A","#5E8FD1","#B58BD6"];
+const PAL=["#FFC21A","#19D3C5","#FF4D8D","#FF3B30","#35D07F","#FF8A00","#3AA0FF","#A78BFA","#A3E635","#B5651D"];
 function catForm(id,fromCarga){const st=S();const c=id?st.cats.find(x=>x.id===id):null;
  const prev=D&&fromCarga;
  const extra=c?[{i:0,t:"Borrar categoría",cls:"red",f:()=>{if(st.mov.some(m=>m.c===c.id)){A.toast("Tiene movimientos: no se puede borrar");return}st.cats=st.cats.filter(x=>x!==c);A.persist();A.close();A.render()}}]:[];
- A.form(c?"Categoría":"Nueva categoría",[{k:"n",label:"Nombre",type:"text",v:c?c.n:""},{k:"c",label:"Color",type:"select",v:c?c.c:PAL[0],opts:PAL.map((p,i)=>[p,["Mostaza","Verde agua","Rojo","Gris azulado","Verde","Naranja","Azul","Violeta"][i]])},
+ A.form(c?"Categoría":"Nueva categoría",[{k:"n",label:"Nombre",type:"text",v:c?c.n:""},{k:"c",label:"Color",type:"select",v:c?c.c:PAL[0],opts:PAL.map((p,i)=>[p,["Amarillo","Verde agua","Rosa","Rojo","Verde","Naranja","Azul","Violeta","Lima","Marrón"][i]])},
   {k:"ic",label:"Ícono",type:"select",v:c?c.ic:"dots",opts:["cart","fuel","glass","car","bag","heart","home","plus","bolt","paw","book","gym","tv","wifi","cut","gift","dots"].map(x=>[x,{cart:"Carrito",fuel:"Surtidor",glass:"Copa",car:"Auto",bag:"Bolsa",heart:"Corazón",home:"Casa",plus:"Cruz",bolt:"Rayo",paw:"Huella",book:"Libro",gym:"Pesas",tv:"Pantalla",wifi:"Wifi",cut:"Tijera",gift:"Regalo",dots:"Puntos"}[x]])},
-  {k:"lim",label:"Límite mensual (opcional)",type:"num",v:c&&c.lim?String(c.lim):""},{k:"v",label:"Es un gasto vital",type:"switch",v:c?!!c.v:false}],
-  {extra,full:true,save:v=>{if(!v.n.trim())return false;const o={n:v.n.trim(),c:v.c,ic:v.ic,lim:A.parseAmt(v.lim)||undefined,v:v.v?1:undefined};if(c)Object.assign(c,o);else{const nc=Object.assign({id:"c"+T.uid()},o);st.cats.push(nc);if(prev)setTimeout(()=>{A.openCarga();D.c=nc.id;D.more=true;drawCarga()},320)}}})}
+  {k:"subs",label:"Detalles (separados por coma)",type:"text",v:c?(c.subs||[]).map(x=>x.n).join(", "):"",ph:"Ropa, perfumería, tecnología…"},{k:"lim",label:"Límite mensual (opcional)",type:"num",v:c&&c.lim?String(c.lim):""},{k:"v",label:"Es un gasto vital",type:"switch",v:c?!!c.v:false}],
+  {extra,full:true,save:v=>{if(!v.n.trim())return false;const nm=(v.subs||"").split(",").map(x=>x.trim()).filter(Boolean),old=(c&&c.subs)||[],cid=c?c.id:"c"+T.uid();const subs=nm.map(n=>{const e=old.find(x=>x.n.toLowerCase()===n.toLowerCase());return e||{id:cid+"."+T.uid(),n}});const o={n:v.n.trim(),c:v.c,ic:v.ic,subs,lim:A.parseAmt(v.lim)||undefined,v:v.v?1:undefined};if(c)Object.assign(c,o);else{const nc=Object.assign({id:cid},o);st.cats.push(nc);if(prev)setTimeout(()=>{A.openCarga();D.c=nc.id;D.more=true;drawCarga()},320)}}})}
 A.act.cat=b=>{A._back=true;catForm(b.dataset.id)};A.act.catnew=()=>{A._back=true;catForm(null)};
 
 /* ===== ajustes ===== */

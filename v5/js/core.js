@@ -13,19 +13,28 @@ const dim=k=>{const [y,m]=k.split("-").map(Number);return new Date(y,m,0).getDat
 const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
 const R=n=>Math.round(n);
 
+const SUBS={
+ compras:["Ropa","Perfumería","Tecnología","Flores","Regalos"],
+ salidas:["Restaurante","Delivery","Bar","Cine"],
+ casa:["Muebles","Limpieza","Arreglos"],
+ salud:["Consultas","Estudios","Gimnasio"]};
+const mk=(id,n,ic,c,v)=>({id,n,ic,c,v,subs:(SUBS[id]||[]).map(x=>({id:id+"."+x.toLowerCase().normalize("NFD").replace(/[^a-z]/g,""),n:x}))});
 const CATS=[
- {id:"super",n:"Súper",ic:"cart",c:"#E8AA2A",v:1},
- {id:"comb",n:"Combustible",ic:"fuel",c:"#3FA89B"},
- {id:"salidas",n:"Salidas",ic:"glass",c:"#C2455E"},
- {id:"transp",n:"Transporte",ic:"car",c:"#B58BD6",v:1},
- {id:"compras",n:"Compras",ic:"bag",c:"#7C8AA5"},
- {id:"salud",n:"Salud",ic:"heart",c:"#5FAE72",v:1},
- {id:"casa",n:"Casa",ic:"home",c:"#D98B4A",v:1},
- {id:"farmacia",n:"Farmacia",ic:"plus",c:"#8CC9A0",v:1},
- {id:"servicios",n:"Servicios",ic:"bolt",c:"#5E8FD1",v:1},
- {id:"mascota",n:"Mascota",ic:"paw",c:"#E07A5F"},
- {id:"otros",n:"Otros",ic:"dots",c:"#7C8AA5"}
+ mk("super","Súper","cart","#FFC21A",1),
+ mk("comb","Combustible","fuel","#19D3C5"),
+ mk("salidas","Salidas","glass","#FF4D8D"),
+ mk("transp","Transporte","car","#A78BFA",1),
+ mk("compras","Compras","bag","#FF3B30"),
+ mk("salud","Salud","heart","#35D07F",1),
+ mk("casa","Casa","home","#FF8A00",1),
+ mk("farmacia","Farmacia","plus","#A3E635",1),
+ mk("servicios","Servicios","bolt","#3AA0FF",1),
+ mk("mascota","Mascota","paw","#B5651D"),
+ mk("otros","Otros","dots","#9CA3AF")
 ];
+const OLDC={super:"#E8AA2A",comb:"#3FA89B",salidas:"#C2455E",transp:"#B58BD6",compras:"#7C8AA5",salud:"#5FAE72",casa:"#D98B4A",farmacia:"#8CC9A0",servicios:"#5E8FD1",mascota:"#E07A5F",otros:"#7C8AA5"};
+/* pasa datos viejos al formato nuevo: colores vivos y subcategorías sugeridas */
+function migrate(S){CATS.forEach(d=>{const c=S.cats.find(x=>x.id===d.id);if(!c)return;if(c.c===OLDC[d.id])c.c=d.c;if(!c.subs)c.subs=JSON.parse(JSON.stringify(d.subs))});S.cats.forEach(c=>{if(!c.subs)c.subs=[]});return S}
 const fresh=()=>({v:5,setup:false,
  cfg:{savePct:25,savePctM:{},fx:1200,fxAuto:true,fxAt:0,floor:0},
  cats:JSON.parse(JSON.stringify(CATS)),
@@ -114,6 +123,11 @@ function week(S,today){
 function byCat(S,from,to){
  const o={};S.mov.forEach(m=>{if((m.t==="g"||m.t==="r")&&m.d>=from&&m.d<=to)o[m.c]=(o[m.c]||0)+(m.t==="r"?-m.a:m.a)});return o;
 }
+function bySub(S,from,to,cid){const o={};S.mov.forEach(m=>{if((m.t==="g"||m.t==="r")&&m.c===cid&&m.d>=from&&m.d<=to){const k=m.s||"_";o[k]=(o[k]||0)+(m.t==="r"?-m.a:m.a)}});return o}
+function ahorroRange(S,from,to){return S.mov.filter(m=>m.t==="a"&&m.d>=from&&m.d<=to).reduce((s,m)=>s+m.a,0)}
+/* categorías ordenadas por uso (las que más cargás, primero) */
+function catOrder(S){const f={};S.mov.forEach(m=>{if(m.t==="g"&&!m.rid)f[m.c]=(f[m.c]||0)+1});return S.cats.map((c,i)=>[c,i]).sort((a,b)=>(f[b[0].id]||0)-(f[a[0].id]||0)||a[1]-b[1]).map(x=>x[0])}
+function typical(S,cid){const v=S.mov.filter(m=>m.t==="g"&&!m.rid&&m.c===cid).map(m=>m.a).sort((a,b)=>a-b);return S.typ[cid]||(v.length>=2?v[Math.floor(v.length/2)]:0)}
 function spentRange(S,from,to){return Object.values(byCat(S,from,to)).reduce((s,v)=>s+v,0)}
 /* cajas */
 function boxes(S){
@@ -169,6 +183,6 @@ function upcoming(S,today){ // pagos que faltan este mes (los vencidos incluidos
 }
 function daysTo(a,b){return Math.round((fromIso(a)-fromIso(b))/864e5)}
 
-const T={KEY,fresh,load,save,iso,fromIso,ym,ymOf,addM,diffM,dim,uid,R,pad,lastBizDay,nthBizDay,recDay,occs,incomeMonthOf,calc,week,byCat,spentRange,boxes,debtsTotal,owedTotal,invTotal,netWorth,goalSaved,goalMonthly,netSeries,usual,upcoming,daysTo,CATS};
+const T={KEY,fresh,load,save,iso,fromIso,ym,ymOf,addM,diffM,dim,uid,R,pad,lastBizDay,nthBizDay,recDay,occs,incomeMonthOf,calc,week,byCat,bySub,ahorroRange,catOrder,typical,migrate,spentRange,boxes,debtsTotal,owedTotal,invTotal,netWorth,goalSaved,goalMonthly,netSeries,usual,upcoming,daysTo,CATS};
 if(typeof module!=="undefined"&&module.exports)module.exports=T;else root.T=T;
 })(typeof globalThis!=="undefined"?globalThis:this);

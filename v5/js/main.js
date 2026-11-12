@@ -4,7 +4,13 @@ A.fetchFx=async function(force){const c=A.S.cfg;if(!force&&(c.fxAuto===false||Da
  try{const r=await fetch("https://dolarapi.com/v1/dolares/bolsa",{cache:"no-store"});const j=await r.json();const v=Math.round(j.venta||j.compra);if(!(v>0))return false;
   c.fx=v;c.fxAt=Date.now();c.fxAuto=true;A.persist();A.render();return v}catch(e){return false}};
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&A.S.setup){A.render();A.fetchFx(false)}});
-A.S.cats.forEach(c=>{if(c.id==="super"&&c.n==="Supermercado")c.n="Súper"});
+A.S.cats.forEach(c=>{if(c.id==="super"&&c.n==="Supermercado")c.n="Súper"});T.migrate(A.S);A.persist();
+/* deslizar a los costados cambia de pestaña */
+(function(){const ORD=["mov","hoy","metas","pat"];let x0=null,y0=0,ok=false;
+ document.addEventListener("touchstart",e=>{const t=e.touches[0];x0=t.clientX;y0=t.clientY;ok=!document.querySelector("#sheet.on")&&!(e.target.closest&&e.target.closest("input,select,textarea,.ruler"));},{passive:true});
+ document.addEventListener("touchend",e=>{if(x0==null||!ok){x0=null;return}const t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;x0=null;
+  if(Math.abs(dx)<70||Math.abs(dx)<Math.abs(dy)*1.8)return;const i=ORD.indexOf(A.S.ui.tab),n=i+(dx<0?1:-1);if(n<0||n>=ORD.length)return;
+  A.S.ui.tab=ORD[n];A.persist();A.render();window.scrollTo(0,0)},{passive:true});})();
 A.$("#fab").addEventListener("click",()=>A.openCarga());
 A.render();
 if(A.S.setup)A.fetchFx(false);

@@ -17,36 +17,60 @@ function ruler(per,today){
  let t="";for(let i=0;i<n;i++)t+=`<i class="${i<idx?"p":i===idx?"t":""}"></i>`;
  return {html:`<div class="ruler" aria-hidden="true">${t}</div>`,txt};
 }
-/* torta: hasta 5 categorías + otros; se toca una porción y se abre el detalle */
-function slices(S,r){
+/* torta: categorías (con el ahorro como porción); al tocar una con detalle se abre otra torta con sus matices */
+const AHC="#F3EBDD";
+function slices(S,r,drill){
+ if(drill){const c=A.cat(drill),subs=c.subs||[],by=T.bySub(S,r.from,r.to,drill),un=by._||0,n=subs.length+(un?1:0)||1;
+  const segs=subs.map((x,i)=>({id:x.id,n:x.n,c:A.subc(c.c,i,n),v:by[x.id]||0})).filter(x=>x.v>0);
+  if(un)segs.push({id:"_",n:"Sin detalle",c:A.subc(c.c,subs.length,n),v:un});
+  segs.sort((a,b)=>b.v-a.v);return {segs,tot:segs.reduce((s,x)=>s+x.v,0),cat:c}}
  const by=T.byCat(S,r.from,r.to);const ent=Object.entries(by).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]);
- const tot=ent.reduce((s,e)=>s+e[1],0);
- const segs=ent.slice(0,5).map(([id,v])=>({id,n:A.cat(id).n,c:A.cat(id).c,v}));
- const rest=ent.slice(5);if(rest.length)segs.push({id:"otros",n:"Otros",c:"#6B6357",v:rest.reduce((s,e)=>s+e[1],0),sub:rest});
+ const ah=T.ahorroRange(S,r.from,r.to);
+ const tot=ent.reduce((s,e)=>s+e[1],0)+ah;
+ let main=ent.filter((e,i)=>i<6&&e[1]/tot>=.04),rest=ent.filter(e=>!main.includes(e));
+ const segs=main.map(([id,v])=>({id,n:A.cat(id).n,c:A.cat(id).c,v}));
+ if(rest.length)segs.push({id:"otros",n:"Otros",c:"#6B7280",v:rest.reduce((s,e)=>s+e[1],0),sub:rest});
+ if(ah>0)segs.push({id:"_ah",n:"Ahorro",c:AHC,v:ah});
  return {segs,tot};
 }
 function donutSvg(sl,sel){
- const R0=78,c=2*Math.PI*R0;let out=`<circle cx="100" cy="100" r="${R0}" stroke="rgba(255,255,255,.06)" stroke-width="26"/>`,off=0;
- const gap=sl.segs.length>1?3:0;
- sl.segs.forEach((s,i)=>{const full=c*s.v/sl.tot,len=Math.max(1,full-gap),on=sel===s.id,dim=sel&&!on;
-  out+=`<circle data-a="slice" data-i="${s.id}" cx="100" cy="100" r="${R0}" stroke="${s.c}" stroke-width="${on?36:26}" stroke-dasharray="${len.toFixed(1)} ${(c-len).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" opacity="${dim?.28:1}" style="cursor:pointer;transition:stroke-width .18s,opacity .18s"/>`;off+=full});
- return `<svg viewBox="0 0 200 200" role="img" aria-label="Gastos por categoría"><g transform="rotate(-90 100 100)" fill="none">${out}</g></svg>`;
+ const R0=79,W=24,c=2*Math.PI*R0;let base=`<circle cx="100" cy="100" r="${R0}" stroke="rgba(255,255,255,.06)" stroke-width="${W}"/>`,off=0,top="";
+ const gap=sl.segs.length>1?7:0;
+ sl.segs.forEach(s=>{const full=c*s.v/sl.tot,on=sel===s.id,dim=sel&&!on,sw=on?32:W;
+  const len=Math.max(.1,full-gap-W),o=-(off+gap/2+W/2);
+  const el=`<circle data-a="slice" data-i="${s.id}" cx="100" cy="100" r="${R0}" stroke="${s.c}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${len.toFixed(1)} ${(c-len).toFixed(1)}" stroke-dashoffset="${o.toFixed(1)}" opacity="${dim?.3:1}" style="cursor:pointer;transition:stroke-width .18s,opacity .18s"/>`;
+  if(on)top+=el;else base+=el;off+=full});
+ return `<svg viewBox="0 0 200 200" role="img" aria-label="En qué se fue la plata"><g transform="rotate(-90 100 100)" fill="none">${base}${top}</g></svg>`;
 }
+function hasSubs(S,r,id){const c=A.cat(id);return !!(c.subs&&c.subs.length&&S.mov.some(m=>(m.t==="g"||m.t==="r")&&m.c===id&&m.s&&m.d>=r.from&&m.d<=r.to))}
 A.drawDonut=function(){
- const el=document.getElementById("dnw");if(!el||!A._dn)return;const {sl,r,per}=A._dn;
+ const el=document.getElementById("dnw");if(!el||!A._dn)return;const {r,per}=A._dn;
+ if(A._drill&&!hasSubs(A.S,r,A._drill))A._drill=null;
+ const sl=slices(A.S,r,A._drill);
  const sel=sl.segs.find(x=>x.id===A._sel)?A._sel:null;if(!sel)A._sel=null;
- const cur=sel?sl.segs.find(x=>x.id===sel):null;
- const center=cur?`<span class="dl" style="color:${cur.c}">${A.esc(cur.n)}</span><b>${A.money(cur.v)}</b><span class="dl">${Math.round(cur.v/sl.tot*100)}%</span>`:`<span class="dl">Gastado</span><b>${A.money(sl.tot)}</b>`;
+ const cur=sel?sl.segs.find(x=>x.id===sel):null,dc=sl.cat;
+ const top=dc?`<span class="dl" style="color:${dc.c}">‹ ${A.esc(dc.n)}</span>`:`<span class="dl">Total</span>`;
+ const center=cur?`<span class="dl" style="color:${cur.c}">${A.esc(cur.n)}</span><b>${A.money(cur.v)}</b><span class="dl">${Math.round(cur.v/sl.tot*100)}%</span>`:`${top}<b>${A.money(sl.tot)}</b>`;
+ const mvRow=(m,name)=>`<button class="dr" data-a="edit" data-id="${m.id}"><span class="dd">${A.dateShort(m.d).replace(/^\S+ /,"")}</span><span>${A.esc(m.note||name)}${m.tag?` · ${A.esc(m.tag)}`:""}</span><b>${m.t==="r"?"+ ":""}${A.money(m.a)}</b></button>`;
+ const inR=m=>m.d>=r.from&&m.d<=r.to;
  let det="";
  if(cur){
   let rows;
-  if(cur.id==="otros")rows=cur.sub.map(([id,v])=>`<div class="dr"><i style="background:${A.cat(id).c}"></i><span>${A.esc(A.cat(id).n)}</span><b>${A.money(v)}</b></div>`).join("");
-  else rows=A.S.mov.filter(m=>(m.t==="g"||m.t==="r")&&m.c===cur.id&&m.d>=r.from&&m.d<=r.to).sort((a,b)=>a.d<b.d?1:-1)
-   .map(m=>`<button class="dr" data-a="edit" data-id="${m.id}"><span class="dd">${A.dateShort(m.d).replace(/^\S+ /,"")}</span><span>${A.esc(m.note||cur.n)}${m.tag?` · ${A.esc(m.tag)}`:""}</span><b>${m.t==="r"?"+ ":""}${A.money(m.a)}</b></button>`).join("");
+  if(cur.id==="otros")rows=cur.sub.map(([id,v])=>`<button class="dr" data-a="slice" data-i="${id}"><i style="background:${A.cat(id).c}"></i><span>${A.esc(A.cat(id).n)}</span><b>${A.money(v)}</b></button>`).join("");
+  else if(cur.id==="_ah")rows=A.S.mov.filter(m=>m.t==="a"&&inR(m)).sort((a,b)=>a.d<b.d?1:-1).map(m=>{const g=m.goal&&A.S.goals.find(x=>x.id===m.goal);return `<button class="dr" data-a="edit" data-id="${m.id}"><span class="dd">${A.dateShort(m.d).replace(/^\S+ /,"")}</span><span>${g?A.esc(g.name):"Ahorro"}${m.u?" · USD "+A.fmt2(m.u):""}</span><b>${A.money(m.a)}</b></button>`}).join("");
+  else if(A._drill)rows=A.S.mov.filter(m=>(m.t==="g"||m.t==="r")&&m.c===A._drill&&(m.s||"_")===cur.id&&inR(m)).sort((a,b)=>a.d<b.d?1:-1).map(m=>mvRow(m,cur.n)).join("");
+  else rows=A.S.mov.filter(m=>(m.t==="g"||m.t==="r")&&m.c===cur.id&&inR(m)).sort((a,b)=>a.d<b.d?1:-1).map(m=>mvRow(m,cur.n)).join("");
   det=`<div class="dets">${rows}</div>`}
- el.innerHTML=sl.tot?`<div class="dn"><div class="dsvg">${donutSvg(sl,sel)}<button class="dc" data-a="slice" data-i="">${center}</button></div></div>${det}`:`<div class="empty" style="padding:26px 0">Todavía no hay gastos en este período.</div>`;
+ else if(A._drill)det=`<div class="dets">${sl.segs.map(x=>`<button class="dr" data-a="slice" data-i="${x.id}"><i style="background:${x.c}"></i><span>${A.esc(x.n)}</span><em>${Math.round(x.v/sl.tot*100)}%</em><b>${A.money(x.v)}</b></button>`).join("")}</div>`;
+ else det=`<div class="leg">${sl.segs.map(x=>`<button data-a="slice" data-i="${x.id}"><i style="background:${x.c}"></i>${A.esc(x.n)}</button>`).join("")}</div>`;
+ const back=A._drill?`<button class="addl" style="padding:6px 0" data-a="slice" data-i="">‹ Volver a todo</button>`:"";
+ el.innerHTML=sl.tot?`<div class="dn"><div class="dsvg">${donutSvg(sl,sel)}<button class="dc" data-a="slice" data-i="">${center}</button></div></div>${back}${det}`:`<div class="empty" style="padding:26px 0">Todavía no hay movimientos en este período.</div>`;
 };
-A.act.slice=b=>{const id=b.dataset.i;A._sel=(!id||A._sel===id)?null:id;A.drawDonut()};
+A.act.slice=b=>{const id=b.dataset.i;
+ if(!id){if(A._sel)A._sel=null;else A._drill=null;A.drawDonut();return}
+ if(!A._drill&&id!=="otros"&&id!=="_ah"&&A._dn&&hasSubs(A.S,A._dn.r,id)&&A._sel!==id){A._drill=id;A._sel=null;A.drawDonut();return}
+ if(!A._drill&&A._dn&&A.S.cats.some(c=>c.id===id)&&b.classList.contains("dr")){A._sel=id;A.drawDonut();return}
+ A._sel=(A._sel===id)?null:id;A.drawDonut()};
 function dayLabel(date,today){const n=T.daysTo(date,today);return n===0?"vence hoy":n===1?"mañana":n>1?"en "+n+" días":n===-1?"venció ayer":"venció hace "+(-n)+" días"}
 
 A.renderHoy=function(){
@@ -54,17 +78,17 @@ A.renderHoy=function(){
  const w=T.week(S,today),m=w.month,r=range(per,today),ru=ruler(per,today);
  const spent=T.spentRange(S,r.from,r.to);
  let big,lab,wk=[],bar="",negBig=false;
- const ahMes=A.money(m.ahorro);
- if(per==="mes"){big=m.rest;lab=m.rest<0?"Te pasaste este mes":"Podés gastar este mes";wk.push([w.left<0?"Esta semana te pasaste":"Esta semana te quedan",A.money(Math.abs(w.left))]);wk.push(["Ahorro del mes",ahMes]);
+ const ahMes=A.money(T.ahorroRange(S,today.slice(0,7)+"-01",today.slice(0,7)+"-31"));
+ if(per==="mes"){big=m.rest;lab=m.rest<0?"Te pasaste este mes":"Podés gastar este mes";wk.push([w.left<0?"Esta semana te pasaste":"Esta semana te quedan",A.money(Math.abs(w.left))]);wk.push(["Ahorrado este mes",ahMes]);
   const pct=w.allow>0?Math.max(0,Math.min(100,w.spent/w.allow*100)):(w.spent>0?100:0);
   bar=`<div class="bar ${w.left<0?"red":""}"><div style="width:${pct}%"></div></div>`}
- else if(per==="semana"){big=w.left;lab=w.left<0?"Te pasaste esta semana":"Podés gastar esta semana";wk.push([m.rest<0?"Este mes te pasaste":"Este mes te quedan",A.money(Math.abs(m.rest))]);wk.push(["Ahorro del mes",ahMes]);
+ else if(per==="semana"){big=w.left;lab=w.left<0?"Te pasaste esta semana":"Podés gastar esta semana";wk.push([m.rest<0?"Este mes te pasaste":"Este mes te quedan",A.money(Math.abs(m.rest))]);wk.push(["Ahorrado este mes",ahMes]);
   const pct=w.allow>0?Math.max(0,Math.min(100,w.spent/w.allow*100)):(w.spent>0?100:0);
   bar=`<div class="bar ${w.left<0?"red":""}"><div style="width:${pct}%"></div></div>`}
  else{big=spent;lab=per==="anio"?"Gastaste este año":per==="3a"?"Gastaste en 3 años":"Gastaste en 5 años";
   const sv=S.mov.filter(x=>x.t==="a"&&x.d>=r.from&&x.d<=r.to).reduce((s,x)=>s+x.a,0);wk.push(["Ahorraste",A.money(sv)])}
  negBig=big<0;if(per==="mes"||per==="semana")big=Math.abs(big);
- const sl=slices(S,r);A._dn={sl,r,per};if(A._selPer!==per){A._sel=null;A._selPer=per}
+ A._dn={r,per};if(A._selPer!==per){A._sel=null;A._drill=null;A._selPer=per}
  const bx=T.boxes(S);
  let av="";
  m.pend.filter(p=>p.kind==="ingreso"&&p.date<=today).forEach(p=>{av+=`<button class="tile aviso" data-a="cobre" data-rid="${p.r.id}" data-occ="${p.occ}"><span class="d">${+p.date.slice(8)}</span><span class="m">${A.esc(p.r.name)}<small>por confirmar · ${dayLabel(p.date,today)}</small></span><span class="a">${A.money(p.a)}</span></button>`});
@@ -72,7 +96,9 @@ A.renderHoy=function(){
  const soon=up.filter(p=>T.daysTo(p.date,today)<=7).reduce((s,p)=>s+p.a,0);
  const short=soon>0&&bx.ars<soon;
  const upH=up.length?up.map((p,i)=>`<button class="tile ${short&&i===0?"warn":""} ${p.date<today?"late":""}" data-a="pago" data-rid="${p.r.id}" data-occ="${p.occ}"><span class="d">${+p.date.slice(8)}</span><span class="m">${A.esc(p.r.name)}<small>${short&&i===0?"Ojo: la plata en pesos no alcanza · ":""}${dayLabel(p.date,today)}</small></span><span class="a">${A.money(p.a)}</span></button>`).join(""):`<div class="note" style="margin:2px 0 8px">No quedan pagos este mes.</div>`;
- const rowL=per==="mes"?"Gastado este mes":per==="semana"?"Gastado esta semana":"Gastado en el período";
+ const rowL="En qué se va la plata";
+ const ahReg=T.ahorroRange(S,r.from,r.to),ahRem=Math.max(0,m.ahorro-ahReg);
+ const ahT=(per==="mes"&&m.ahorro>0&&ahRem>0)?`<button class="tile ahor" data-a="ahorrar"><span class="d">$</span><span class="m">Ahorro del mes<small>Falta anotar · ${ahReg>0?"ya anotaste "+A.money(ahReg):"todavía no anotaste nada"}</small></span><span class="a">${A.money(ahRem)}</span></button>`:"";
  $h.innerHTML=`<div class="field">
  <div class="fdate"><button data-a="ajustes" aria-label="Fecha y ajustes">${A.dateLong(today)}</button><small>${ru.txt}</small></div>
  ${ru.html}
@@ -84,6 +110,7 @@ A.renderHoy=function(){
  <div class="below">
  <div class="row2"><span>${rowL}</span></div>
  <div id="dnw"></div>
+ ${ahT}
  ${av?`<div class="h3">Para confirmar</div>${av}`:""}
  <div class="h3" style="display:flex;justify-content:space-between;align-items:baseline"><span>Próximos pagos</span><button class="addl" data-a="pagonuevo">+ Agregar</button></div>${upH}
  </div>`;

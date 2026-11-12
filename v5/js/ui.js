@@ -41,6 +41,10 @@ const P={
 A.P=P;
 A.svg=n=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${P[n]||P.dots}"/></svg>`;
 A.cat=id=>A.S.cats.find(c=>c.id===id)||{id,n:"Otros",ic:"dots",c:"#7C8AA5"};
+A.subc=(hex,i,n)=>{const r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;
+ const mx=Math.max(r,g,b),mn=Math.min(r,g,b);let h=0,sat=0;const l=(mx+mn)/2;
+ if(mx!==mn){const d=mx-mn;sat=l>.5?d/(2-mx-mn):d/(mx+mn);h=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;h*=60}
+ const t=n<=1?.5:i/(n-1);return `hsl(${Math.round(h)} ${Math.round(Math.max(60,sat*100))}% ${Math.round(36+t*40)}%)`};
 A.ic=(n,c)=>`<span class="ic" style="--c:${c||"var(--acc)"}">${A.svg(n)}</span>`;
 A.catIc=id=>{const c=A.cat(id);return A.ic(c.ic,c.c)};
 A.catSvg=c=>`<svg viewBox="0 0 24 24" style="--c:${c.c}" aria-hidden="true"><path d="${P[c.ic]||P.dots}"/></svg>`;

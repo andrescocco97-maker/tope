@@ -217,3 +217,21 @@ select.chip{appearance:none;padding-right:14px}
 .tabs button{color:#9A8C70}.tabs button.on{color:var(--acc)}
 .seg button{opacity:1}.fdate small{color:var(--cream2)}
 .card .fld input{background:#0B0805}
+
+/* v5.2 */
+.carga .chips{flex-wrap:nowrap;gap:6px}.carga .chip{padding:0 12px;white-space:nowrap}
+.nin{display:block;margin:6px auto 0;width:78%;text-align:center;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--cream);font:inherit;font-size:calc(14px*var(--k,1));padding:6px 4px;border-radius:0}
+.nin::placeholder{color:var(--mute);opacity:.7}.nin:focus{outline:0;border-bottom-color:var(--acc)}
+.pk{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:15px;background:var(--surf)}
+.pk svg{width:18px;height:18px;stroke:var(--c);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.sub{height:46px;border-radius:14px;background:var(--surf);display:flex;align-items:center;gap:8px;padding:0 10px;font-size:calc(13px*var(--k,1));color:var(--cream);min-width:0}
+.sub span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub i{width:10px;height:10px;border-radius:5px;background:var(--c);flex:none}
+.sub.on{outline:1.5px solid var(--acc);background:#2A2012}
+.sub.add{justify-content:center;border:1px dashed var(--line);background:transparent;color:var(--mute)}
+.leg{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;margin-top:10px}
+.leg button{display:inline-flex;align-items:center;gap:6px;font-size:calc(12.5px*var(--k,1));color:var(--mute);min-height:28px}
+.leg i{width:9px;height:9px;border-radius:5px}
+.dr em{font-style:normal;color:var(--mute);font-size:calc(12px*var(--k,1))}
+.tile.ahor{border:1px dashed #F3EBDD66;background:transparent;margin-top:10px}.tile.ahor .d,.tile.ahor .a{color:#F3EBDD}
+.sub{justify-content:flex-start;text-align:left}.sub span{flex:1}.sub.add{justify-content:center}
