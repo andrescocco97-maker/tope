@@ -147,7 +147,7 @@ function boxes(S){
   if(m.t==="i")ars+=m.a;
   else if(m.t==="g"){if(m.pu)usd-=m.u;else ars-=m.a}
   else if(m.t==="r")ars+=m.a;
-  else if(m.t==="a"){if(m.u){ars-=m.a;usd+=m.u}}
+  else if(m.t==="a"){if(m.inv)ars-=m.a;else if(m.u){ars-=m.a;usd+=m.u}}
   else if(m.t==="d")ars-=m.a;
   else if(m.t==="dc")ars+=m.a;
   else if(m.t==="aj")ars+=m.a; // ajuste de control (+/-)
@@ -156,7 +156,8 @@ function boxes(S){
 }
 function debtsTotal(S){return S.debts.reduce((s,d)=>s+(d.cur==="USD"?d.a*S.cfg.fx:d.a),0)}
 function owedTotal(S){return S.mov.filter(m=>m.t==="d"&&!m.closed).reduce((s,m)=>s+m.a,0)}
-function invTotal(S){return S.inv.reduce((s,i)=>s+(i.cur==="USD"?i.v*S.cfg.fx:i.v),0)}
+function invVal(S,i){return i.v+S.mov.filter(m=>m.t==="a"&&m.inv===i.id).reduce((s,m)=>s+(i.cur==="USD"?(m.u||m.a/(m.fx||S.cfg.fx||1)):m.a),0)}
+function invTotal(S){return S.inv.reduce((s,i)=>s+(i.cur==="USD"?invVal(S,i)*S.cfg.fx:invVal(S,i)),0)}
 function netWorth(S){const b=boxes(S);return R(b.ars+b.usd*S.cfg.fx+invTotal(S)+owedTotal(S)-debtsTotal(S))}
 function goalShare(S,g,m){ // cuánto de un ahorro le toca a la meta: la que eligió, o el reparto por % entre todas
  const amt=g.cur==="USD"?(m.u||(m.fx?m.a/m.fx:m.a/(S.cfg.fx||1))):m.a;
@@ -193,6 +194,6 @@ function upcoming(S,today){ // pagos que faltan este mes (los vencidos incluidos
 }
 function daysTo(a,b){return Math.round((fromIso(a)-fromIso(b))/864e5)}
 
-const T={KEY,fresh,load,save,iso,fromIso,ym,ymOf,addM,diffM,dim,uid,R,pad,lastBizDay,nthBizDay,recDay,occs,incomeMonthOf,calc,week,byCat,bySub,isVital,ahorroRange,catOrder,typical,migrate,spentRange,boxes,debtsTotal,owedTotal,invTotal,netWorth,goalSaved,goalMonthly,netSeries,usual,upcoming,daysTo,CATS};
+const T={KEY,fresh,load,save,iso,fromIso,ym,ymOf,addM,diffM,dim,uid,R,pad,lastBizDay,nthBizDay,recDay,occs,incomeMonthOf,calc,week,byCat,bySub,isVital,ahorroRange,catOrder,typical,migrate,spentRange,boxes,invVal,debtsTotal,owedTotal,invTotal,netWorth,goalSaved,goalMonthly,netSeries,usual,upcoming,daysTo,CATS};
 if(typeof module!=="undefined"&&module.exports)module.exports=T;else root.T=T;
 })(typeof globalThis!=="undefined"?globalThis:this);

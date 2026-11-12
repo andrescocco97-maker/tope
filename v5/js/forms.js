@@ -41,6 +41,7 @@ function drawCarga(){
   body+=`<div class="lbl">Ahorro <button class="addl" data-a="csp" data-s="">Cambiar</button></div>
   <label class="fld" style="margin-top:0"><span>Dólares que recibiste (opcional)</span><input id="du" inputmode="decimal" placeholder="0" value="${A.esc(D.u)}" autocomplete="off"></label>
   ${v>0&&A.parseAmt(D.u)>0?`<div class="note">Cotización: $ ${A.fmt2(v/A.parseAmt(D.u))} por dólar</div>`:""}
+  ${st.inv.length?`<div class="lbl">¿Va a una inversión? (se suma a su valor)</div><div class="chips" style="margin-top:0">${st.inv.map(i=>`<button class="chip ${D.inv===i.id?"on":""}" data-a="cinv" data-id="${i.id}">${A.esc(i.name)}</button>`).join("")}</div>`:""}
   ${st.goals.length>1?`<div class="lbl">¿A qué meta suma? (si no elegís, se reparte)</div><div class="chips" style="margin-top:0">${st.goals.map(g=>`<button class="chip ${D.goal===g.id?"on":""}" data-a="cgoal" data-id="${g.id}">${A.esc(g.name)}</button>`).join("")}</div>`:""}
   <button class="go" data-a="csave" ${v>0?"":"disabled"}>Guardar ahorro</button>`;
  }else if(t==="e"&&D.sp==="d"){
@@ -58,7 +59,7 @@ function drawCarga(){
  <div class="tcs">${TYPES.map(x=>`<button class="${t===x[0]?"on":""}" data-a="ctype" data-t="${x[0]}">${x[1]}</button>`).join("")}</div>
  <div class="amt"><div><span class="cur">${D.usd&&t==="e"?"USD":"$"}</span>${amtView()}</div></div>${noteIn}</div><div class="cmid">${noteRow}${body}</div><div class="ckeys">${keypad}</div>`);
 }
-A.openCarga=function(){D={s:null,pick:false,t:"e",sp:null,amt:"",usd:false,pu:false,c:null,d:A.today(),note:"",n:3,cu:false,u:"",goal:null,next:false,more:false,det:false,rid:null,occ:null};A.sheet("",{cls:"carga"});drawCarga()};
+A.openCarga=function(){D={s:null,pick:false,t:"e",sp:null,amt:"",usd:false,pu:false,c:null,d:A.today(),note:"",n:3,cu:false,u:"",goal:null,inv:null,next:false,more:false,det:false,rid:null,occ:null};A.sheet("",{cls:"carga"});drawCarga()};
 A.act.fabopen=A.openCarga;
 A.act.key=b=>{const k=b.dataset.k;let s=D.amt;
  if(k==="⌫")s=s.slice(0,-1);else if(k===","){if(!s.includes(","))s=(s||"0")+","}else{const [i,d]=s.split(",");if(s.includes(",")){if((d||"").length<2)s+=k}else if(i.length<8&&!(i===""&&k==="0"))s+=k}
@@ -73,6 +74,7 @@ A.act.ccu=()=>{D.cu=!D.cu;redraw()};
 A.act.crid=b=>{if(D.rid===b.dataset.rid){D.rid=null;D.occ=null}else{D.rid=b.dataset.rid;D.occ=b.dataset.occ}redraw()};
 A.act.cmore=()=>{D.more=true;redraw()};
 A.act.cnext=()=>{D.next=!D.next;redraw()};
+A.act.cinv=b=>{D.inv=D.inv===b.dataset.id?null:b.dataset.id;redraw()};
 A.act.cgoal=b=>{D.goal=D.goal===b.dataset.id?null:b.dataset.id;redraw()};
 A.act.cn=b=>{D.n=Math.max(2,Math.min(60,D.n+(+b.dataset.d)));redraw()};
 A.act.ccat=b=>{const c=A.cat(b.dataset.id);D.c=c.id;D.s=null;const v=A.parseAmt(D.amt);
@@ -93,7 +95,7 @@ function limMsg(m,st){const c=m.t==="g"&&st.cats.find(x=>x.id===m.c);if(!c||!(c.
 function commit(m,msg){const st=A.S;st.mov.push(m);msg=limMsg(m,st)||msg;A.persist();A.close();A.render();A.buzz(18);A.toast(msg||"Anotado",()=>{st.mov=st.mov.filter(x=>x.id!==m.id);A.persist();A.render()})}
 A.act.csave=()=>{const st=A.S,v=A.parseAmt(D.amt);if(!(v>0))return;const t=D.t,fx=st.cfg.fx||1;
  if(t==="i"){const r=D.rid&&st.rec.find(x=>x.id===D.rid);commit(r?{id:T.uid(),t:"i",a:Math.round(v),d:D.d,note:r.name,rid:r.id,occ:D.occ,feeds:r.feeds||"cur"}:{id:T.uid(),t:"i",a:Math.round(v),d:D.d,note:D.note.trim()||undefined,feeds:D.next?"next":"cur"});if(!r)setTimeout(()=>A.bigIncome&&A.bigIncome(Math.round(v)),500);return}
- if(D.sp==="a"){const u=A.parseAmt(D.u);commit({id:T.uid(),t:"a",a:Math.round(v),u:u||undefined,fx:u?v/u:undefined,goal:D.goal||undefined,d:D.d},"Ahorro anotado");return}
+ if(D.sp==="a"){const u=A.parseAmt(D.u);commit({id:T.uid(),t:"a",a:Math.round(v),u:u||undefined,fx:u?v/u:undefined,goal:D.goal||undefined,inv:D.inv||undefined,d:D.d},D.inv?"Sumado a "+(st.inv.find(i=>i.id===D.inv)||{}).name:"Ahorro anotado");return}
  if(D.sp==="d"){commit({id:T.uid(),t:"d",a:Math.round(v),d:D.d,note:D.note.trim()||undefined});return}
  if(!D.c){const rl=A.ruleFor&&A.ruleFor(D.note);if(rl){D.c=rl.c;D.s=rl.s}}
  if(!D.c){const rl=A.ruleFor&&A.ruleFor(D.note);if(rl){D.c=rl.c;D.s=rl.s}}if(!D.c)return;
@@ -168,7 +170,7 @@ A.act.goal=b=>goalForm(S().goals.find(g=>g.id===b.dataset.id));A.act.goalnew=()=
 function listForm(arr,id,title,fields,make,extraDel){const st=S();const it=id?arr.find(x=>x.id===id):null;
  A.form(title,fields(it),{extra:it?[{i:0,t:"Borrar",cls:"red",f:()=>{const i=arr.indexOf(it);arr.splice(i,1);A.persist();A.close();A.render()}}]:[],save:v=>{const o=make(v);if(!o)return false;if(it)Object.assign(it,o);else arr.push(Object.assign({id:T.uid()},o))}})}
 A.act.inv=b=>invForm(b.dataset.id);A.act.invnew=()=>invForm(null);
-function invForm(id){listForm(S().inv,id,id?"Inversión":"Nueva inversión",it=>[{k:"name",label:"Nombre",type:"text",v:it?it.name:"",ph:"Bitcoin, S&P 500, Nexo…"},{k:"cur",label:"Moneda",type:"select",v:it?it.cur:"USD",opts:[["USD","Dólares"],["ARS","Pesos"]]},{k:"v",label:"Cuánto vale hoy",type:"num",v:it?String(it.v):""}],v=>v.name.trim()&&A.parseAmt(v.v)>=0?{name:v.name.trim(),cur:v.cur,v:A.parseAmt(v.v)}:null)}
+function invForm(id){listForm(S().inv,id,id?"Inversión":"Nueva inversión",it=>[{k:"name",label:"Nombre",type:"text",v:it?it.name:"",ph:"Bitcoin, S&P 500, Nexo…"},{k:"cur",label:"Moneda",type:"select",v:it?it.cur:"USD",opts:[["USD","Dólares"],["ARS","Pesos"]]},{k:"v",label:"Cuánto vale hoy",type:"num",v:it?String(Math.round(T.invVal(S(),it)*100)/100):""}],v=>{const it=id&&S().inv.find(x=>x.id===id);return v.name.trim()&&A.parseAmt(v.v)>=0?{name:v.name.trim(),cur:v.cur,v:A.parseAmt(v.v)-(it?T.invVal(S(),it)-it.v:0)}:null})}
 A.act.debt=b=>debtForm(b.dataset.id);A.act.debtnew=()=>debtForm(null);
 function debtForm(id){listForm(S().debts,id,id?"Deuda":"Nueva deuda",it=>[{k:"name",label:"¿A quién o qué?",type:"text",v:it?it.name:"",ph:"Tarjeta, préstamo…"},{k:"cur",label:"Moneda",type:"select",v:it?it.cur:"ARS",opts:[["ARS","Pesos"],["USD","Dólares"]]},{k:"a",label:"Cuánto debés",type:"num",v:it?String(it.a):""}],v=>v.name.trim()&&A.parseAmt(v.a)>0?{name:v.name.trim(),cur:v.cur,a:A.parseAmt(v.a)}:null)}
 A.act.controlusd=()=>{const st=S(),bx=T.boxes(st);st.ui.ctl=A.today();
@@ -230,7 +232,7 @@ A.act.ajustes=()=>{const st=S();
  <div class="h3">Categorías</div><div class="chips" style="margin-top:0">${st.cats.map(c=>`<button class="chip" data-a="cat" data-id="${c.id}"><i style="width:8px;height:8px;border-radius:4px;background:${c.c}"></i>${A.esc(c.n)}</button>`).join("")}<button class="chip" data-a="catnew">+ Nueva</button></div>
  ${A.rulesHtml()}
  <div class="h3">Respaldo</div><div class="two"><button class="go ghost" data-a="export" style="margin:0;height:46px">Exportar todo</button><label class="go ghost" style="margin:0;height:46px;line-height:46px;display:block;cursor:pointer">Importar<input type="file" id="imp" accept=".json,application/json" hidden></label></div>
- <div class="note" style="text-align:center;margin-top:16px">Tope v5 · versión 12</div><button class="go red" data-a="reset" style="margin-top:22px;height:46px">Borrar todo y empezar de nuevo</button></div>`,{part:true,onClose:saveAjustes});};
+ <div class="note" style="text-align:center;margin-top:16px">Tope v5 · versión 13</div><button class="go red" data-a="reset" style="margin-top:22px;height:46px">Borrar todo y empezar de nuevo</button></div>`,{part:true,onClose:saveAjustes});};
 document.addEventListener("input",e=>{if(e.target.id==="as"||e.target.id==="afx")saveAjustes(true)});
 function saveAjustes(quiet){const st=S(),a=A.$("#as"),f=A.$("#afx");if(a){const v=Math.round(A.parseAmt(a.value));if(v>=0&&v<=90)st.cfg.savePct=v}if(f){const v=A.parseAmt(f.value);if(v>0&&v!==st.cfg.fx){st.cfg.fx=v;st.cfg.fxAuto=false}}A.persist();if(!quiet)A.render()}
 A.act.fxget=async b=>{const n=A.$("#fxn");n.textContent="Buscando…";const v=await A.fetchFx(true);if(v){A.$("#afx").value=String(v);n.textContent="Dólar MEP de hoy: $ "+A.fmt(v)+". Se actualiza solo al abrir la app."}else n.textContent="No pude traerlo (¿sin señal?). Cargalo a mano."};
