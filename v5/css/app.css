@@ -211,3 +211,9 @@ select.chip{appearance:none;padding-right:14px}
 .tcs button{flex:1;text-align:center;padding:8px 6px;font-size:calc(14px*var(--k,1))}
 .cmid .grid4{gap:6px}
 .cat{font-size:calc(11px*var(--k,1))}
+
+.seg button{min-height:40px}.chip{min-height:40px}.tcs button{min-height:40px}
+.fdate button{padding:10px 0}.addl{padding:12px 0 12px 14px}
+.tabs button{color:#9A8C70}.tabs button.on{color:var(--acc)}
+.seg button{opacity:1}.fdate small{color:var(--cream2)}
+.card .fld input{background:#0B0805}

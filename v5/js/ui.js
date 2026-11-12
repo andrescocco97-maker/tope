@@ -17,7 +17,7 @@ A.fmt2=n=>{const v=Math.round(n*100)/100;const [i,d]=String(Math.abs(v)).split("
 A.money=n=>"$ "+A.fmt(n);
 A.usd=n=>"USD "+A.fmt2(n);
 A.k=n=>{const a=Math.abs(n);return (n<0?"-":"")+(a>=1e6?(a/1e6).toFixed(1).replace(".",",")+" M":Math.round(a/1e3)+"k")};
-A.parseAmt=s=>{s=String(s||"").trim().replace(/\./g,"").replace(",",".");const v=parseFloat(s);return isFinite(v)?v:0};
+A.parseAmt=s=>{s=String(s||"").trim();if(/^\d+\.\d{1,2}$/.test(s))s=s.replace(".",",");s=s.replace(/\./g,"").replace(",",".");const v=parseFloat(s);return isFinite(v)?v:0};
 const MES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 A.MES=MES;
 A.dateLong=iso=>{const d=T.fromIso(iso);return d.getDate()+" de "+MES[d.getMonth()]+" "+d.getFullYear()};

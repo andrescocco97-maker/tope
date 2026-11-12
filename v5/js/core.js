@@ -14,7 +14,7 @@ const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slic
 const R=n=>Math.round(n);
 
 const CATS=[
- {id:"super",n:"Supermercado",ic:"cart",c:"#E8AA2A",v:1},
+ {id:"super",n:"Súper",ic:"cart",c:"#E8AA2A",v:1},
  {id:"comb",n:"Combustible",ic:"fuel",c:"#3FA89B"},
  {id:"salidas",n:"Salidas",ic:"glass",c:"#C2455E"},
  {id:"transp",n:"Transporte",ic:"car",c:"#B58BD6",v:1},
@@ -123,7 +123,7 @@ function boxes(S){
   if(m.t==="i")ars+=m.a;
   else if(m.t==="g"){if(m.pu)usd-=m.u;else ars-=m.a}
   else if(m.t==="r")ars+=m.a;
-  else if(m.t==="a"){ars-=m.a;usd+=m.u||0}
+  else if(m.t==="a"){if(m.u){ars-=m.a;usd+=m.u}}
   else if(m.t==="d")ars-=m.a;
   else if(m.t==="dc")ars+=m.a;
   else if(m.t==="aj")ars+=m.a; // ajuste de control (+/-)

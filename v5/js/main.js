@@ -3,7 +3,8 @@
 A.fetchFx=async function(force){const c=A.S.cfg;if(!force&&(c.fxAuto===false||Date.now()-(c.fxAt||0)<3*36e5))return false;
  try{const r=await fetch("https://dolarapi.com/v1/dolares/bolsa",{cache:"no-store"});const j=await r.json();const v=Math.round(j.venta||j.compra);if(!(v>0))return false;
   c.fx=v;c.fxAt=Date.now();c.fxAuto=true;A.persist();A.render();return v}catch(e){return false}};
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&A.S.setup)A.fetchFx(false)});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&A.S.setup){A.render();A.fetchFx(false)}});
+A.S.cats.forEach(c=>{if(c.id==="super"&&c.n==="Supermercado")c.n="Súper"});
 A.$("#fab").addEventListener("click",()=>A.openCarga());
 A.render();
 if(A.S.setup)A.fetchFx(false);

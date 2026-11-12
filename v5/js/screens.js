@@ -55,19 +55,19 @@ A.renderHoy=function(){
  const spent=T.spentRange(S,r.from,r.to);
  let big,lab,wk=[],bar="",negBig=false;
  const ahMes=A.money(m.ahorro);
- if(per==="mes"){big=m.rest;lab="Podés gastar este mes";wk.push([w.left<0?"Esta semana te pasaste":"Esta semana te quedan",A.money(w.left)]);wk.push(["Ahorro del mes",ahMes]);
+ if(per==="mes"){big=m.rest;lab=m.rest<0?"Te pasaste este mes":"Podés gastar este mes";wk.push([w.left<0?"Esta semana te pasaste":"Esta semana te quedan",A.money(Math.abs(w.left))]);wk.push(["Ahorro del mes",ahMes]);
   const pct=w.allow>0?Math.max(0,Math.min(100,w.spent/w.allow*100)):(w.spent>0?100:0);
   bar=`<div class="bar ${w.left<0?"red":""}"><div style="width:${pct}%"></div></div>`}
- else if(per==="semana"){big=w.left;lab=w.left<0?"Esta semana te pasaste":"Podés gastar esta semana";wk.push(["Este mes te quedan",A.money(m.rest)]);wk.push(["Ahorro del mes",ahMes]);
+ else if(per==="semana"){big=w.left;lab=w.left<0?"Te pasaste esta semana":"Podés gastar esta semana";wk.push([m.rest<0?"Este mes te pasaste":"Este mes te quedan",A.money(Math.abs(m.rest))]);wk.push(["Ahorro del mes",ahMes]);
   const pct=w.allow>0?Math.max(0,Math.min(100,w.spent/w.allow*100)):(w.spent>0?100:0);
   bar=`<div class="bar ${w.left<0?"red":""}"><div style="width:${pct}%"></div></div>`}
  else{big=spent;lab=per==="anio"?"Gastaste este año":per==="3a"?"Gastaste en 3 años":"Gastaste en 5 años";
   const sv=S.mov.filter(x=>x.t==="a"&&x.d>=r.from&&x.d<=r.to).reduce((s,x)=>s+x.a,0);wk.push(["Ahorraste",A.money(sv)])}
- negBig=big<0;
+ negBig=big<0;if(per==="mes"||per==="semana")big=Math.abs(big);
  const sl=slices(S,r);A._dn={sl,r,per};if(A._selPer!==per){A._sel=null;A._selPer=per}
  const bx=T.boxes(S);
  let av="";
- m.pend.filter(p=>p.kind==="ingreso"&&p.date<=today).forEach(p=>{av+=`<button class="tile aviso" data-a="cobre" data-rid="${p.r.id}" data-occ="${p.occ}"><span class="d">${+p.date.slice(8)}</span><span class="m">${A.esc(p.r.name)}<small>por confirmar · tocá cuando cobres</small></span><span class="a">${A.money(p.a)}</span></button>`});
+ m.pend.filter(p=>p.kind==="ingreso"&&p.date<=today).forEach(p=>{av+=`<button class="tile aviso" data-a="cobre" data-rid="${p.r.id}" data-occ="${p.occ}"><span class="d">${+p.date.slice(8)}</span><span class="m">${A.esc(p.r.name)}<small>por confirmar · ${dayLabel(p.date,today)}</small></span><span class="a">${A.money(p.a)}</span></button>`});
  const up=T.upcoming(S,today);
  const soon=up.filter(p=>T.daysTo(p.date,today)<=7).reduce((s,p)=>s+p.a,0);
  const short=soon>0&&bx.ars<soon;
@@ -119,7 +119,7 @@ function mvList(){
 A.renderMov=function(){
  const S=A.S,f=A.f;if(!f.m)f.m=A.today().slice(0,7);
  const tags=[...new Set(S.mov.map(m=>m.tag).filter(Boolean))];
- A.$("#s-mov").innerHTML=`<div class="pad"><h1 class="title">Movimientos</h1>
+ A.$("#s-mov").innerHTML=`<div class="pad"><h1 class="title">Historial</h1>
  <input class="search" id="q" type="search" placeholder="Buscar por nota o monto" value="${A.esc(f.q)}" autocomplete="off">
  <div class="chips"><button class="chip" data-a="mprev" aria-label="Mes anterior">‹</button><span class="chip on" style="min-width:128px;justify-content:center">${f.m==="all"?"Todo":A.monthName(f.m)}</span><button class="chip" data-a="mnext" aria-label="Mes siguiente">›</button>
  <button class="chip" data-a="mall">${f.m==="all"?"Ver mes":"Ver todo"}</button></div>
@@ -143,7 +143,7 @@ A.vitalMonthly=function(){
 };
 A.goalTarget=g=>{if(g.auto==="colchon"){const v=A.vitalMonthly()*6;return g.cur==="USD"?v/(A.S.cfg.fx||1):v}return g.a};
 A.renderMetas=function(){
- const S=A.S,gc=S.ui.gcur||"ARS",fx=S.cfg.fx||1;
+ const S=A.S,gc=S.ui.gcur||(S.goals[0]&&S.goals[0].cur)||"ARS",fx=S.cfg.fx||1;
  const conv=(v,cur)=>gc===cur?v:(gc==="USD"?v/fx:v*fx);
  const f=v=>gc==="USD"?"USD "+A.fmt(v):"$ "+A.fmt(v);
  const gl=S.goals;
@@ -155,7 +155,7 @@ A.renderMetas=function(){
   const left=Math.max(0,tgt-sv);const meses=mo>0?Math.ceil(left/mo):null;
   let line="";if(g.auto==="colchon"&&tgt<=0)line="Se calcula con 6 meses de tus gastos vitales.";
   else if(left<=0)line="Meta cumplida.";
-  else if(meses)line=`Con ${f(conv(mo,g.cur))} por mes llegás en ${meses} ${meses===1?"mes":"meses"}.`;
+  else if(meses)line=`Con ${f(conv(mo,g.cur))} por mes llegás en ${meses>=24?Math.floor(meses/12)+" años"+(meses%12?" y "+(meses%12)+(meses%12===1?" mes":" meses"):""):meses+(meses===1?" mes":" meses")}.`;
   else line="Todavía no hay aportes: anotá un ahorro y elegí esta meta.";
   if(g.date&&left>0){const mm=Math.max(1,T.diffM(A.today().slice(0,7),g.date.slice(0,7)));line+=` Para llegar en ${A.monthName(g.date.slice(0,7))} necesitás ${f(conv(left/mm,g.cur))} por mes.`}
   if(i===0)h+=`<button data-a="goal" data-id="${g.id}" style="display:block;width:100%"><h1 class="title" style="margin-top:6px">${A.esc(g.name)}</h1>
