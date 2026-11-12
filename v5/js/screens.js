@@ -8,6 +8,13 @@ function range(per,today){
  if(per==="anio")return {from:d.getFullYear()+"-01-01",to:d.getFullYear()+"-12-31"};
  const y=per==="3a"?3:5;return {from:T.iso(new Date(d.getFullYear()-y,d.getMonth(),d.getDate())),to:today};
 }
+function shiftR(per,today,off){
+ if(per==="mes"){const k=T.addM(today.slice(0,7),-off);return {r:{from:k+"-01",to:k+"-"+T.pad(T.dim(k))},lab:off?A.monthName(k):"Este mes"}}
+ if(per==="semana"){const d=T.fromIso(today);d.setDate(d.getDate()-7*off);const r=range("semana",T.iso(d));return {r,lab:off?A.dateShort(r.from)+" al "+A.dateShort(r.to):"Esta semana"}}
+ if(per==="anio"){const y=+today.slice(0,4)-off;return {r:{from:y+"-01-01",to:y+"-12-31"},lab:off?String(y):"Este año"}}
+ return {r:range(per,today),lab:""}}
+function dnav(per,dr){if(!(per==="mes"||per==="semana"||per==="anio"))return "";return `<span class="dnav"><button data-a="doff" data-d="1" aria-label="Anterior">‹</button><span>${dr.lab}</span><button data-a="doff" data-d="-1" aria-label="Siguiente" ${(A._doff||0)<=0?"disabled":""}>›</button></span>`}
+A.act.doff=b=>{A._doff=Math.max(0,(A._doff||0)+ +b.dataset.d);A._sel=null;A._drill=null;A.renderHoy()};
 function ruler(per,today){
  const d=T.fromIso(today);let n,idx,txt;
  if(per==="semana"){n=7;idx=(d.getDay()+6)%7;txt="día "+(idx+1)+" de 7"}
@@ -91,7 +98,7 @@ A.renderHoy=function(){
  else{big=spent;lab=per==="anio"?"Gastaste este año":per==="3a"?"Gastaste en 3 años":"Gastaste en 5 años";
   const sv=S.mov.filter(x=>x.t==="a"&&x.d>=r.from&&x.d<=r.to).reduce((s,x)=>s+x.a,0);wk.push(["Ahorraste",A.money(sv)])}
  negBig=big<0;if(per==="mes"||per==="semana")big=Math.abs(big);
- A._dn={r,per};if(A._selPer!==per){A._sel=null;A._drill=null;A._selPer=per}
+ const dr=shiftR(per,today,A._doff||0);A._dn={r:dr.r,per};if(A._selPer!==per){A._sel=null;A._drill=null;A._selPer=per}
  const bx=T.boxes(S);
  let av="";
  m.pend.filter(p=>p.kind==="ingreso"&&p.date<=today).forEach(p=>{av+=`<button class="tile aviso" data-a="cobre" data-rid="${p.r.id}" data-occ="${p.occ}"><span class="d">${+p.date.slice(8)}</span><span class="m">${A.esc(p.r.name)}<small>por confirmar · ${dayLabel(p.date,today)}</small></span><span class="a">${A.money(p.a)}</span></button>`});
@@ -113,7 +120,7 @@ A.renderHoy=function(){
  ${wk.map((x,i)=>`<div class="wk"><span>${x[0]}</span><b>${x[1]}</b></div>${i===0?bar:""}`).join("")}
  </div>
  <div class="below">
- <div class="row2"><span>${rowL}</span></div>
+ <div class="row2"><span>${rowL}</span>${dnav(per,dr)}</div>
  <div id="dnw"></div>
  ${A.avisosHoy?A.avisosHoy():""}
  ${ahT}
@@ -125,7 +132,7 @@ A.renderHoy=function(){
  const from=A._big;A._big=big;A.countTo(document.getElementById("bigv"),big,(from!=null&&A._bigPer===per)?from:null);A._bigPer=per;document.getElementById('bigv').dataset.final=A.fmt(big);A.fitBig();
 };
 const $h=A.$("#s-hoy");
-A.act.per=b=>{A.S.ui.per=b.dataset.p;A.persist();A.renderHoy()};
+A._doff=0;A.act.per=b=>{A._doff=0;A.S.ui.per=b.dataset.p;A.persist();A.renderHoy()};
 
 /* ---------- Movimientos ---------- */
 function mvInfo(m){
@@ -220,9 +227,12 @@ A.renderPat=function(){
   <div class="row2" style="margin-top:6px"><span>${A.monthName(ser[0].k)}</span><span>${A.monthName(ser[ser.length-1].k)}</span></div>`}
  else chart=`<div class="note">La línea aparece cuando tengas 3 meses de movimientos.</div>`;
  const owed=S.mov.filter(m=>m.t==="d"&&!m.closed);
+ const parts=[["Pesos",Math.max(0,bx.ars),"#FFC21A"],["Dólares",Math.max(0,bx.usd*fx),"#35D07F"],["Inversiones",T.invTotal(S),"#3AA0FF"],["Me deben",T.owedTotal(S),"#A78BFA"]].filter(x=>x[1]>0),ptot=parts.reduce((q,x)=>q+x[1],0),dbt=T.debtsTotal(S);
+ const compo=ptot>0?`<div class="h3">De qué está hecho</div><div class="cbar">${parts.map(x=>`<i style="width:${x[1]/ptot*100}%;background:${x[2]}"></i>`).join("")}</div>${parts.map(x=>`<div class="crow"><span><i style="background:${x[2]}"></i>${x[0]}</span><span class="cp">${Math.round(x[1]/ptot*100)}%</span><b>${fm(dv(x[1]))}</b></div>`).join("")}${dbt>0?`<div class="crow"><span><i style="background:#FF3B30"></i>Deudas</span><span class="cp">${Math.round(dbt/ptot*100)}%</span><b style="color:var(--warn)">− ${fm(dv(dbt))}</b></div>`:""}`:"";
  let h=`<div class="pad"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:calc(15px*var(--k,1));font-weight:600;color:var(--cream2)">Patrimonio</span>
  <span class="chips" style="margin:0"><button class="chip ${cur==="ARS"?"on":""}" data-a="pcur" data-c="ARS">Pesos</button><button class="chip ${cur==="USD"?"on":""}" data-a="pcur" data-c="USD">Dólares</button></span></div>
- <div class="lab" style="margin-top:20px">Lo que tenés, menos lo que debés</div><div class="net"><span class="cur">${cur==="USD"?"USD":"$"}</span>${A.fmt(dv(nw))}</div>${chart}
+ <div class="phero"><div class="lab" style="margin-top:0">Lo que tenés, menos lo que debés</div><div class="net"><span class="cur">${cur==="USD"?"USD":"$"}</span>${A.fmt(dv(nw))}</div>${chart}</div>
+ ${compo}
  <div class="h3">Cajas</div>
  <button class="tile" data-a="control"><span class="m">En pesos<small>tocá para corregir el saldo</small></span><span class="a" style="color:var(--cream)">${A.money(bx.ars)}</span></button>
  <button class="tile" data-a="controlusd"><span class="m">En dólares<small>${A.usd(bx.usd)} al MEP de $ ${A.fmt(fx)}</small></span><span class="a" style="color:var(--cream)">${fm(dv(bx.usd*fx))}</span></button>
