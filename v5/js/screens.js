@@ -129,7 +129,8 @@ A.act.per=b=>{A.S.ui.per=b.dataset.p;A.persist();A.renderHoy()};
 /* ---------- Movimientos ---------- */
 function mvInfo(m){
  const c=A.cat(m.c);
- if(m.t==="g")return {ic:A.ic(c.ic,c.c),t:m.note||c.n,s:[m.note?c.n:"",m.tag||"",m.u?"USD "+A.fmt2(m.u):""].filter(Boolean).join(" · "),a:A.money(m.a)};
+ const sn=A.subName(m.c,m.s),cl=sn?c.n+" · "+sn:c.n;
+ if(m.t==="g")return {ic:A.ic(c.ic,c.c),t:m.note||sn||c.n,s:[m.note?cl:(sn?c.n:""),m.tag||"",m.u?"USD "+A.fmt2(m.u):""].filter(Boolean).join(" · "),a:A.money(m.a)};
  if(m.t==="r")return {ic:A.ic(c.ic,c.c),t:m.note||"Reintegro",s:c.n,a:"+ "+A.money(m.a),cls:"in"};
  if(m.t==="i")return {ic:A.ic("income","var(--ok)"),t:m.note||"Ingreso",s:m.feeds==="next"?"para el mes que viene":"ingreso",a:"+ "+A.money(m.a),cls:"in"};
  if(m.t==="a"){const g=A.S.goals.find(x=>x.id===m.goal);return {ic:A.ic("coin"),t:"Ahorro",s:(g?g.name+" · ":"")+(m.u?"USD "+A.fmt2(m.u):""),a:A.money(m.a)}}
@@ -152,7 +153,9 @@ function mvList(){
 A.renderMov=function(){
  const S=A.S,f=A.f;if(!f.m)f.m=A.today().slice(0,7);
  const tags=[...new Set(S.mov.map(m=>m.tag).filter(Boolean))];
- A.$("#s-mov").innerHTML=`<div class="pad"><h1 class="title">Historial</h1>
+ const vw=f.view==="an";
+ if(vw){A.$("#s-mov").innerHTML=`<div class="pad"><h1 class="title">Historial</h1><div class="seg" style="margin-top:10px"><button data-a="mview" data-v="lista">Lista</button><button class="on" data-a="mview" data-v="an">Análisis</button></div><div id="anb"></div></div>`;A.renderAn(document.getElementById("anb"));return}
+ A.$("#s-mov").innerHTML=`<div class="pad"><h1 class="title">Historial</h1><div class="seg" style="margin-top:10px"><button class="on" data-a="mview" data-v="lista">Lista</button><button data-a="mview" data-v="an">Análisis</button></div>
  <input class="search" id="q" type="search" placeholder="Buscar por nota o monto" value="${A.esc(f.q)}" autocomplete="off">
  <div class="chips"><button class="chip" data-a="mprev" aria-label="Mes anterior">‹</button><span class="chip on" style="min-width:128px;justify-content:center">${f.m==="all"?"Todo":A.monthName(f.m)}</span><button class="chip" data-a="mnext" aria-label="Mes siguiente">›</button>
  <button class="chip" data-a="mall">${f.m==="all"?"Ver mes":"Ver todo"}</button></div>
@@ -168,8 +171,7 @@ document.addEventListener("change",e=>{if(e.target.id==="fc"){A.f.c=e.target.val
 
 /* ---------- Metas ---------- */
 A.vitalMonthly=function(){
- const S=A.S,t=A.today().slice(0,7);const ks=[T.addM(t,-1),T.addM(t,-2),T.addM(t,-3)];const vit=new Set(S.cats.filter(c=>c.v).map(c=>c.id));
- const tot=S.mov.filter(m=>m.t==="g"&&vit.has(m.c)&&ks.includes(m.d.slice(0,7))).reduce((s,m)=>s+m.a,0);
+ const S=A.S,t=A.today().slice(0,7);const ks=[T.addM(t,-1),T.addM(t,-2),T.addM(t,-3)];const tot=S.mov.filter(m=>m.t==="g"&&T.isVital(S,m)&&ks.includes(m.d.slice(0,7))).reduce((s,m)=>s+m.a,0);
  const months=ks.filter(k=>S.mov.some(m=>m.d.slice(0,7)===k)).length;
  if(months)return tot/months;
  const c=T.calc(S,t,A.today());return c.fijos;

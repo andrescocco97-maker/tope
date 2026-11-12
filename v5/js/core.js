@@ -13,29 +13,37 @@ const dim=k=>{const [y,m]=k.split("-").map(Number);return new Date(y,m,0).getDat
 const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
 const R=n=>Math.round(n);
 
-const SUBS={
- compras:["Ropa","Perfumería","Tecnología","Flores","Regalos"],
- salidas:["Restaurante","Delivery","Bar","Cine"],
- casa:["Muebles","Limpieza","Arreglos"],
- salud:["Consultas","Estudios","Gimnasio"]};
-const mk=(id,n,ic,c,v)=>({id,n,ic,c,v,subs:(SUBS[id]||[]).map(x=>({id:id+"."+x.toLowerCase().normalize("NFD").replace(/[^a-z]/g,""),n:x}))});
-const CATS=[
- mk("super","Súper","cart","#FFC21A",1),
- mk("comb","Combustible","fuel","#19D3C5"),
- mk("salidas","Salidas","glass","#FF4D8D"),
- mk("transp","Transporte","car","#A78BFA",1),
- mk("compras","Compras","bag","#FF3B30"),
- mk("salud","Salud","heart","#35D07F",1),
- mk("casa","Casa","home","#FF8A00",1),
- mk("farmacia","Farmacia","plus","#A3E635",1),
- mk("servicios","Servicios","bolt","#3AA0FF",1),
- mk("mascota","Mascota","paw","#B5651D"),
- mk("otros","Otros","dots","#9CA3AF")
+/* categorías = tu estructura de Wallet: grupo -> detalles (v = vital) */
+const slug=x=>x.toLowerCase().normalize("NFD").replace(/[^a-z]/g,"");
+const GR=[
+ ["comida","Comida","cart","#FFC21A",[["Supermercado",1],["Verdulería",1],["Carnicería",1],["Panadería",1],["Dietética",1],["Otros comestibles"],["Delivery"],["Restaurante"]]],
+ ["mascota","Mascota","paw","#C77B3F",[["Alimento",1],["Veterinaria",1]]],
+ ["compras","Compras","bag","#FF3B30",[["Farmacia y belleza",1],["Salud",1],["Electrónica y accesorios"],["Hogar y jardín"],["Papelería y herramientas"],["Regalos y alegrías"],["Ropa y calzado"],["Imprevistos"]]],
+ ["vivienda","Vivienda","home","#FF8A00",[["Alquiler",1],["Expensas",1],["Electricidad",1],["Gas",1],["Mantenimiento y reparaciones",1],["Seguro de propiedad"]]],
+ ["transp","Transporte","car","#A78BFA",[],1],
+ ["vehiculo","Vehículo","fuel","#19D3C5",[["Combustible",1],["Estacionamiento"],["Mantenimiento"],["Seguro"]]],
+ ["vida","Vida y entretenimiento","glass","#FF4D8D",[["Peluquería"],["Bienestar y belleza"],["Salud y doctor",1],["Cultura y eventos deportivos"],["Deporte y fitness"],["Educación y desarrollo personal"],["Juntadas"],["Libros, audio y suscripciones"],["Pasatiempos"],["TV y streaming"],["Vacaciones y viajes"]]],
+ ["comunic","Comunicación y PC","wifi","#3AA0FF",[["Internet",1],["Teléfono y móvil",1],["Software, apps y juegos"]]],
+ ["finanzas","Gastos financieros","coin","#A3E635",[["Asesoramiento"],["Cargos y comisiones"],["Impuestos"],["Multas"],["Ejercicio profesional"],["Préstamos e intereses"],["Seguros"]]],
+ ["otros","Otros","dots","#9CA3AF",[]]
 ];
-const OLDC={super:"#E8AA2A",comb:"#3FA89B",salidas:"#C2455E",transp:"#B58BD6",compras:"#7C8AA5",salud:"#5FAE72",casa:"#D98B4A",farmacia:"#8CC9A0",servicios:"#5E8FD1",mascota:"#E07A5F",otros:"#7C8AA5"};
-/* pasa datos viejos al formato nuevo: colores vivos y subcategorías sugeridas */
-function migrate(S){CATS.forEach(d=>{const c=S.cats.find(x=>x.id===d.id);if(!c)return;if(c.c===OLDC[d.id])c.c=d.c;if(!c.subs)c.subs=JSON.parse(JSON.stringify(d.subs))});S.cats.forEach(c=>{if(!c.subs)c.subs=[]});return S}
-const fresh=()=>({v:5,setup:false,
+const mk=g=>({id:g[0],n:g[1],ic:g[2],c:g[3],v:g[5]?1:undefined,subs:g[4].map(x=>({id:g[0]+"."+slug(x[0]),n:x[0],v:x[1]?1:undefined}))});
+const CATS=GR.map(mk);
+/* ids viejos (versión anterior) -> grupo y detalle nuevos */
+const OLDMAP={super:["comida","comida.supermercado"],comb:["vehiculo","vehiculo.combustible"],salidas:["vida","vida.juntadas"],transp:["transp"],compras:["compras"],salud:["vida","vida.saludydoctor"],casa:["vivienda"],farmacia:["compras","compras.farmaciaybelleza"],servicios:["vivienda","vivienda.electricidad"],mascota:["mascota"],otros:["otros"]};
+const OLDSUB={"compras.ropa":"compras.ropaycalzado","compras.perfumeria":"compras.farmaciaybelleza","compras.tecnologia":"compras.electronicayaccesorios","compras.regalos":"compras.regalosyalegrias","salidas.restaurante":"comida.restaurante","salidas.delivery":"comida.delivery","salidas.bar":"vida.juntadas","salidas.cine":"vida.culturayeventosdeportivos","casa.muebles":"compras.hogarYjardin".toLowerCase(),"casa.limpieza":"vivienda.mantenimientoyreparaciones","casa.arreglos":"vivienda.mantenimientoyreparaciones","salud.consultas":"vida.saludydoctor","salud.estudios":"vida.saludydoctor","salud.gimnasio":"vida.deporteyfitness"};
+const isOld=S=>S.cats.some(c=>c.id==="super"||c.id==="comb"||c.id==="casa"||c.id==="servicios");
+/* pasa datos viejos al formato nuevo */
+function migrate(S){
+ if(isOld(S)){
+  const keep=S.cats.filter(c=>/^c/.test(c.id)&&!OLDMAP[c.id]);
+  const lim={};S.cats.forEach(c=>{if(c.lim){const m=OLDMAP[c.id];if(m)lim[m[0]]=Math.max(lim[m[0]]||0,c.lim)}});
+  S.cats=CATS.map(c=>({...JSON.parse(JSON.stringify(c)),lim:lim[c.id]})).concat(keep);
+  const fix=o=>{const m=OLDMAP[o.c];if(!m)return;const oldSub=o.s,oc=o.c;o.c=m[0];if(oldSub){const t=OLDSUB[oldSub]||null;o.s=t&&S.cats.find(x=>x.id===o.c)?.subs.some(x=>x.id===t)?t:undefined}else if(m[1])o.s=m[1];if(o.s===undefined)delete o.s};
+  S.mov.forEach(fix);S.rec.forEach(fix);S.spr.forEach(fix);
+  const typ={};Object.entries(S.typ||{}).forEach(([k,v])=>{const m=OLDMAP[k];typ[m?m[0]:k]=v});S.typ=typ;
+ }
+ S.cats.forEach(c=>{if(!c.subs)c.subs=[]});return S}const fresh=()=>({v:5,setup:false,
  cfg:{savePct:25,savePctM:{},fx:1200,fxAuto:true,fxAt:0,floor:0},
  cats:JSON.parse(JSON.stringify(CATS)),
  mov:[],rec:[],spr:[],goals:[],inv:[],debts:[],
@@ -123,6 +131,7 @@ function week(S,today){
 function byCat(S,from,to){
  const o={};S.mov.forEach(m=>{if((m.t==="g"||m.t==="r")&&m.d>=from&&m.d<=to)o[m.c]=(o[m.c]||0)+(m.t==="r"?-m.a:m.a)});return o;
 }
+function isVital(S,m){const c=S.cats.find(x=>x.id===m.c);if(!c)return false;if(m.s){const x=(c.subs||[]).find(y=>y.id===m.s);if(x)return !!x.v}return !!c.v}
 function bySub(S,from,to,cid){const o={};S.mov.forEach(m=>{if((m.t==="g"||m.t==="r")&&m.c===cid&&m.d>=from&&m.d<=to){const k=m.s||"_";o[k]=(o[k]||0)+(m.t==="r"?-m.a:m.a)}});return o}
 function ahorroRange(S,from,to){return S.mov.filter(m=>m.t==="a"&&m.d>=from&&m.d<=to).reduce((s,m)=>s+m.a,0)}
 /* categorías ordenadas por uso (las que más cargás, primero) */
@@ -183,6 +192,6 @@ function upcoming(S,today){ // pagos que faltan este mes (los vencidos incluidos
 }
 function daysTo(a,b){return Math.round((fromIso(a)-fromIso(b))/864e5)}
 
-const T={KEY,fresh,load,save,iso,fromIso,ym,ymOf,addM,diffM,dim,uid,R,pad,lastBizDay,nthBizDay,recDay,occs,incomeMonthOf,calc,week,byCat,bySub,ahorroRange,catOrder,typical,migrate,spentRange,boxes,debtsTotal,owedTotal,invTotal,netWorth,goalSaved,goalMonthly,netSeries,usual,upcoming,daysTo,CATS};
+const T={KEY,fresh,load,save,iso,fromIso,ym,ymOf,addM,diffM,dim,uid,R,pad,lastBizDay,nthBizDay,recDay,occs,incomeMonthOf,calc,week,byCat,bySub,isVital,ahorroRange,catOrder,typical,migrate,spentRange,boxes,debtsTotal,owedTotal,invTotal,netWorth,goalSaved,goalMonthly,netSeries,usual,upcoming,daysTo,CATS};
 if(typeof module!=="undefined"&&module.exports)module.exports=T;else root.T=T;
 })(typeof globalThis!=="undefined"?globalThis:this);
