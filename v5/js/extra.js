@@ -40,8 +40,27 @@ A.act.cierreok=b=>{const st=S(),k=b.dataset.k,nota=(A.$("#cnota")||{}).value||""
 A.avisosHoy=()=>{const st=S(),today=A.today(),cur=today.slice(0,7),pk=T.addM(cur,-1);let h="";
  const hay=st.mov.some(m=>m.d.slice(0,7)===pk);
  if(hay&&!(st.cierres||{})[pk]&&+today.slice(8)<=10)h+=`<button class="tile ahor" data-a="cierre" data-k="${pk}"><span class="d">✓</span><span class="m">Cerrá ${A.monthName(pk)}<small>Mirá cómo te fue y dejá una nota</small></span></button>`;
- const last=st.ui.ctl||st.ui.ctl0;if(!st.ui.ctl0)st.ui.ctl0=today;
+ h+=A.bkAviso();const last=st.ui.ctl||st.ui.ctl0;if(!st.ui.ctl0)st.ui.ctl0=today;
  const days=last?Math.round((new Date(today)-new Date(last))/864e5):99;
  if(days>=7)h+=`<button class="tile" data-a="control"><span class="d">$</span><span class="m">Control semanal<small>${days>=99?"Contá cuánto tenés de verdad":"Hace "+days+" días que no controlás el saldo"}</small></span></button>`;
  return h};
+/* ---- compartir con la pareja: se mandan las novedades y se suman sin duplicar ---- */
+A.shareHtml=()=>`<div class="h3">Con tu pareja</div><div class="two"><button class="go ghost" data-a="enviarnov" style="margin:0;height:46px">Enviar mis novedades</button><label class="go ghost" style="margin:0;height:46px;line-height:46px;display:block;cursor:pointer">Recibir<input type="file" id="imp" accept=".json,application/json" hidden></label></div><div class="note">Manda por WhatsApp lo cargado en los últimos 60 días. Al recibirlo se suma lo que falte, sin duplicar.</div>
+ <button class="go ghost" data-a="csv" style="height:46px;margin-top:6px">Exportar para planilla (CSV)</button>`;
+A.act.enviarnov=async()=>{const st=S(),d0=T.iso(new Date(Date.now()-60*864e5));const mv=st.mov.filter(m=>m.d>=d0);
+ const j={tope:"novedades",at:A.today(),mov:mv};const file=new File([JSON.stringify(j)],"tope-novedades-"+A.today()+".json",{type:"application/json"});
+ try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"Novedades de Tope"});return}}catch(e){if(e&&e.name==="AbortError")return}
+ const a=document.createElement("a");a.href=URL.createObjectURL(file);a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)};
+A.mergeIn=j=>{const st=S();const ids=new Set(st.mov.map(m=>m.id));let n=0;
+ (j.mov||[]).forEach(m=>{if(!m||!m.id||ids.has(m.id)||!(m.a>=0)||!m.d)return;
+  if(m.rid&&st.mov.some(x=>x.rid===m.rid&&x.occ===m.occ&&x.t===m.t))return;
+  if(!st.cats.some(c=>c.id===m.c)&&(m.t==="g"||m.t==="r"))m=Object.assign({},m,{c:"otros",s:undefined});
+  st.mov.push(m);ids.add(m.id);n++});
+ A.persist();A.close();A.render();A.toast(n?"Sumé "+n+" movimiento"+(n>1?"s":""):"No había nada nuevo")};
+A.act.csv=()=>{const st=S(),q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"',T2={g:"Gasto",i:"Ingreso",a:"Ahorro",r:"Reintegro",d:"Préstamo",dc:"Cobro de préstamo",aj:"Ajuste"};
+ const rows=[["Fecha","Tipo","Categoría","Detalle","Nota","Monto"].map(q).join(";")].concat(st.mov.slice().sort((a,b)=>a.d<b.d?-1:1).map(m=>[m.d,T2[m.t]||m.t,m.c?A.cat(m.c).n:"",m.c?(A.subName(m.c,m.s)||""):"",m.note||"",String(m.a).replace(".",",")].map(q).join(";")));
+ const b=new Blob(["\ufeff"+rows.join("\r\n")],{type:"text/csv"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="tope-movimientos-"+A.today()+".csv";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)};
+/* ---- aviso de respaldo ---- */
+A.bkAviso=()=>{const st=S(),l=st.ui.bk||st.ui.bk0;if(!st.ui.bk0)st.ui.bk0=A.today();if(st.mov.length<5)return "";const dd=Math.round((new Date(A.today())-new Date(l))/864e5);
+ return dd>=30?`<button class="tile" data-a="export"><span class="d">↓</span><span class="m">Hacé un respaldo<small>Hace ${dd} días que no guardás una copia</small></span></button>`:""};
 })();
