@@ -17,13 +17,13 @@ const CATS=[
  {id:"super",n:"Supermercado",ic:"cart",c:"#E8AA2A",v:1},
  {id:"comb",n:"Combustible",ic:"fuel",c:"#3FA89B"},
  {id:"salidas",n:"Salidas",ic:"glass",c:"#C2455E"},
- {id:"transp",n:"Transporte",ic:"car",c:"#3FA89B",v:1},
+ {id:"transp",n:"Transporte",ic:"car",c:"#B58BD6",v:1},
  {id:"compras",n:"Compras",ic:"bag",c:"#7C8AA5"},
  {id:"salud",n:"Salud",ic:"heart",c:"#5FAE72",v:1},
  {id:"casa",n:"Casa",ic:"home",c:"#D98B4A",v:1},
- {id:"farmacia",n:"Farmacia",ic:"plus",c:"#5FAE72",v:1},
+ {id:"farmacia",n:"Farmacia",ic:"plus",c:"#8CC9A0",v:1},
  {id:"servicios",n:"Servicios",ic:"bolt",c:"#5E8FD1",v:1},
- {id:"mascota",n:"Mascota",ic:"paw",c:"#D98B4A"},
+ {id:"mascota",n:"Mascota",ic:"paw",c:"#E07A5F"},
  {id:"otros",n:"Otros",ic:"dots",c:"#7C8AA5"}
 ];
 const fresh=()=>({v:5,setup:false,
@@ -45,7 +45,12 @@ function recDay(r,k){ // día del mes en que cae un ítem recurrente
 }
 /* ocurrencias de un recurrente dentro de un mes: [{date,key}] */
 function occs(r,k){
+ const o=occs0(r,k);
+ return o.filter(x=>!(r.skip&&r.skip[x.key])).map(x=>r.mv&&r.mv[x.key]?{...x,date:r.mv[x.key]}:x);
+}
+function occs0(r,k){
  if(r.kind==="anual")return [];
+ if(r.once)return r.date&&ymOf(r.date)===k?[{date:r.date,key:r.date}]:[];
  const out=[];const sm=ymOf(r.start||"1970-01-01");
  if(r.every&&r.unit==="w"){ // cada X semanas
   const [y,m]=k.split("-").map(Number);let d=fromIso(r.start);const end=new Date(y,m,0);
@@ -76,11 +81,11 @@ function calc(S,k,today){
    const kk=r.feeds==="next"?addM(k,-1):k;
    occs(r,kk).forEach(o=>{const c=confMov[r.id+"|"+o.key];if(c)ingresos+=c.a;else{ingresos+=r.a;ingEst+=r.a;pend.push({kind:"ingreso",r,date:o.date,occ:o.key,a:r.a})}});
   }else if(r.kind==="gasto"){
-   occs(r,k).forEach(o=>{const c=confMov[r.id+"|"+o.key];const a=c?c.a:R(r.cur==="USD"?r.a*fx:r.a);fijos+=a;fijosList.push({r,date:o.date,occ:o.key,a,done:!!c});if(!c)pend.push({kind:"gasto",r,date:o.date,occ:o.key,a})});
+   occs(r,k).forEach(o=>{const c=confMov[r.id+"|"+o.key];const a=c?c.a:(r.am&&r.am[o.key]!=null?r.am[o.key]:R(r.cur==="USD"?r.a*fx:r.a));fijos+=a;fijosList.push({r,date:o.date,occ:o.key,a,done:!!c});if(!c)pend.push({kind:"gasto",r,date:o.date,occ:o.key,a})});
   }else if(r.kind==="anual"){
    const n=Math.max(1,diffM(ymOf(r.start),ymOf(r.due)));const df=diffM(ymOf(r.start),k);
    if(df>=0&&df<n){fondo+=R((r.cur==="USD"?r.a*fx:r.a)/n)}
-   if(k===ymOf(r.due)){const key=ymOf(r.due);const c=confMov[r.id+"|"+key];if(!c)pend.push({kind:"anual",r,date:r.due,occ:key,a:R(r.cur==="USD"?r.a*fx:r.a)})}
+   if(k===ymOf(r.due)){const key=ymOf(r.due);const c=confMov[r.id+"|"+key];if(!c&&!(r.skip&&r.skip[key]))pend.push({kind:"anual",r,date:r.due,occ:key,a:R(r.cur==="USD"?r.a*fx:r.a)})}
   }
  });
  S.spr.forEach(s=>{const df=diffM(s.start,k);if(df>=0&&df<s.n&&!s.ended)cuotas+=R(s.total/s.n)});
@@ -158,10 +163,9 @@ function usual(S,n){
  return arr.concat(base).slice(0,n||3);
 }
 /* próximos pagos (pendientes de los próximos 45 días) */
-function upcoming(S,today,n){
- const k=ymOf(today);const all=[...calc(S,k,today).pend,...calc(S,addM(k,1),today).pend].filter(p=>p.kind!=="ingreso"&&p.date>=today.slice(0,8)+"01");
- all.sort((a,b)=>a.date<b.date?-1:1);
- return all.filter(p=>p.date>=today||true).slice(0,n||4);
+function upcoming(S,today){ // pagos que faltan este mes (los vencidos incluidos); nada de meses que vienen
+ const k=ymOf(today);const all=calc(S,k,today).pend.filter(p=>p.kind!=="ingreso");
+ all.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);return all;
 }
 function daysTo(a,b){return Math.round((fromIso(a)-fromIso(b))/864e5)}
 

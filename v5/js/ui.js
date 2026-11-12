@@ -1,6 +1,12 @@
 /* Tope v5 — utilidades de interfaz */
 (function(){
 const A=window.A={act:{},f:{q:"",m:null,c:"",tag:""}};
+
+/* el sistema (Android) puede agrandar toda la letra: lo medimos y lo compensamos para que se vea igual en cualquier celu */
+A.fitK=function(){try{const q=new URLSearchParams(location.search).get("k");let k=1;
+ if(q)k=+q||1;else{const d=document.createElement("div");d.style.cssText="position:absolute;visibility:hidden;font-size:100px;line-height:1;font-family:Arial,sans-serif;white-space:nowrap";d.textContent="Hg";document.body.appendChild(d);const h=d.getBoundingClientRect().height;d.remove();if(h>101)k=Math.max(.65,Math.min(1,100/h))}
+ document.documentElement.style.setProperty("--k",String(k));A.K=k}catch(e){}};
+A.fitK();
 A.S=T.load(localStorage);
 A.persist=()=>T.save(localStorage,A.S);
 A.today=()=>{const q=new URLSearchParams(location.search).get("hoy");return q||T.iso(new Date())};
