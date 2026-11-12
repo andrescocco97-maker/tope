@@ -1,7 +1,7 @@
 /* Tope v5 — hojas: carga rápida, edición, ajustes, asistente */
 (function(){
 const S=()=>A.S;
-A.csOpts=()=>{const o=[];A.S.cats.forEach(c=>{if(c.subs&&c.subs.length){c.subs.forEach(x=>o.push([c.id+"|"+x.id,c.n+" · "+x.n]));o.push([c.id+"|",c.n+" · otro"])}else o.push([c.id+"|",c.n])});return o};
+A.csOpts=sel=>{const o=[];A.S.cats.forEach(c=>{if(c.hide&&!(sel&&sel.split("|")[0]===c.id))return;if(c.subs&&c.subs.length){c.subs.forEach(x=>o.push([c.id+"|"+x.id,c.n+" · "+x.n]));o.push([c.id+"|",c.n+" · otro"])}else o.push([c.id+"|",c.n])});return o};
 A.csParse=v=>{const [c,s]=String(v||"").split("|");return {c,s:s||undefined}};
 A.csKey=o=>(o.c||"otros")+"|"+(o.s||"");
 const setSheet=h=>{A.$("#sheet").innerHTML=h};
@@ -12,16 +12,16 @@ const keepScroll=fn=>{const b=sc(),y=b?b.scrollTop:0;fn();const n=sc();if(n)n.sc
 let D=null;
 const TYPES=[["e","Egreso"],["i","Ingreso"]];
 function amtView(){const s=D.amt;if(!s)return `<span class="ph">0</span>`;const [i,d]=s.split(",");return A.fmt(+i||0)+(s.includes(",")?","+(d||""):"")}
-const catBtn=c=>`<button class="cat ${D.c===c.id?"on":""}" data-a="ccat" data-id="${c.id}" style="--c:${c.c}">${A.catSvg(c)}<span>${A.esc(c.n)}</span></button>`;
+const catBtn=c=>`<button class="cat ${D.c===c.id?"on":""} ${D.edit?"ed":""}" data-a="${D.edit?"cedcat":"ccat"}" data-id="${c.id}" style="--c:${c.c}">${A.catSvg(c)}<span>${A.esc(c.n)}</span></button>`;
 const spBtn=(s,n,ic,col)=>`<button class="cat ${D.sp===s?"on":""}" data-a="csp" data-s="${s}" style="--c:${col}"><svg viewBox="0 0 24 24"><path d="${A.P[ic]}"/></svg><span>${n}</span></button>`;
 const AHC="#F3EBDD";
 function catGrid(){
- const cs=T.catOrder(A.S);
- if(!D.more)return `<div class="grid4">${cs.slice(0,6).map(catBtn).join("")}${spBtn("a","Ahorro","coin",AHC)}<button class="cat more" data-a="cmore"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Más</span></button></div>`;
- return `<div class="grid4">${cs.map(catBtn).join("")}${spBtn("a","Ahorro","coin",AHC)}${spBtn("d","Me deben","owe","#9CA3AF")}<button class="cat more" data-a="newcat"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Nueva</span></button></div>`}
+ const cs=T.catOrder(A.S).filter(c=>!c.hide);const ed=`<div class="edrow"><button class="addl" data-a="cedit">${D.edit?"Listo":"Editar categorías"}</button></div>`;
+ if(!D.more)return `<div class="grid4">${cs.slice(0,6).map(catBtn).join("")}${spBtn("a","Ahorro","coin",AHC)}<button class="cat more" data-a="cmore"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Más</span></button></div>${ed}`;
+ return `<div class="grid4">${cs.map(catBtn).join("")}${spBtn("a","Ahorro","coin",AHC)}${spBtn("d","Me deben","owe","#9CA3AF")}<button class="cat more" data-a="newcat"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Nueva</span></button></div>${ed}`}
 function pickView(v){const c=A.cat(D.c),subs=c.subs||[];
- return `<div class="lbl" style="display:flex;align-items:center;gap:8px"><span class="pk" style="--c:${c.c}">${A.catSvg(c)}</span><span style="flex:1;color:var(--cream);font-size:calc(16px*var(--k,1))">${A.esc(c.n)}</span><button class="addl" data-a="cback">Cambiar</button></div>
- ${subs.length?`<div class="lbl" style="margin-top:4px">¿Qué fue?</div><div class="grid3 g2">${subs.map((x,i)=>`<button class="sub ${D.s===x.id?"on":""}" data-a="csub" data-id="${x.id}" style="--c:${A.subc(c.c,i,subs.length)}"><i></i><span>${A.esc(x.n)}</span></button>`).join("")}<button class="sub ${D.s==="_"?"on":""}" data-a="csub" data-id="_" style="--c:#9CA3AF"><i></i><span>Sin detalle</span></button><button class="sub add" data-a="subnew"><span>+ Nueva</span></button></div>`:`<button class="sub add" data-a="subnew" style="margin-top:4px"><span>+ Agregar detalle (ej. perfumería)</span></button>`}
+ return `<div class="lbl" style="display:flex;align-items:center;gap:8px"><span class="pk" style="--c:${c.c}">${A.catSvg(c)}</span><span style="flex:1;color:var(--cream);font-size:calc(16px*var(--k,1))">${A.esc(c.n)}</span><button class="addl" data-a="cedit">${D.edit?"Listo":"Editar"}</button><button class="addl" data-a="cback">Cambiar</button></div>
+ ${subs.length?`<div class="lbl" style="margin-top:4px">¿Qué fue?</div><div class="grid3 g2">${subs.map((x,i)=>`<button class="sub ${D.s===x.id?"on":""}" data-a="${D.edit?"subedit":"csub"}" data-id="${x.id}" style="--c:${A.subc(c.c,i,subs.length)}"><i></i><span>${A.esc(x.n)}</span>${x.v?`<em class="vt">vital</em>`:""}</button>`).join("")}<button class="sub ${D.s==="_"?"on":""}" data-a="csub" data-id="_" style="--c:#9CA3AF"><i></i><span>Sin detalle</span></button><button class="sub add" data-a="subnew"><span>+ Nueva</span></button></div>`:`<button class="sub add" data-a="subnew" style="margin-top:4px"><span>+ Agregar detalle (ej. perfumería)</span></button>`}
  <button class="go" data-a="csave" ${v>0?"":"disabled"}>Guardar</button>`}
 const BKS='<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h11a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7 6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg>';
 const keypad=`<div class="pad4">${["1","2","3","4","5","6","7","8","9",",","0","bk"].map(k=>k==="bk"?`<button data-a="key" data-k="⌫" class="bk" aria-label="Borrar">${BKS}</button>`:`<button data-a="key" data-k="${k}" aria-label="${k}">${k}</button>`).join("")}</div>`;
@@ -59,7 +59,7 @@ function drawCarga(){
  <div class="tcs">${TYPES.map(x=>`<button class="${t===x[0]?"on":""}" data-a="ctype" data-t="${x[0]}">${x[1]}</button>`).join("")}</div>
  <div class="amt"><div><span class="cur">${D.usd&&t==="e"?"USD":"$"}</span>${amtView()}</div></div>${noteIn}</div><div class="cmid">${noteRow}${body}</div><div class="ckeys">${keypad}</div>`);
 }
-A.openCarga=function(){D={s:null,pick:false,t:"e",sp:null,amt:"",usd:false,pu:false,c:null,d:A.today(),note:"",n:3,cu:false,u:"",goal:null,inv:null,next:false,more:false,det:false,rid:null,occ:null};A.sheet("",{cls:"carga"});drawCarga()};
+A.openCarga=function(){RECARGA=null;D={s:null,pick:false,t:"e",sp:null,amt:"",usd:false,pu:false,c:null,d:A.today(),note:"",n:3,cu:false,u:"",goal:null,inv:null,next:false,more:false,det:false,rid:null,occ:null};A.sheet("",{cls:"carga"});drawCarga()};
 A.act.fabopen=A.openCarga;
 A.act.key=b=>{const k=b.dataset.k;let s=D.amt;
  if(k==="⌫")s=s.slice(0,-1);else if(k===","){if(!s.includes(","))s=(s||"0")+","}else{const [i,d]=s.split(",");if(s.includes(",")){if((d||"").length<2)s+=k}else if(i.length<8&&!(i===""&&k==="0"))s+=k}
@@ -82,6 +82,13 @@ A.act.ccat=b=>{const c=A.cat(b.dataset.id);D.c=c.id;D.s=null;const v=A.parseAmt(
  if(c.subs&&c.subs.length){D.pick=true;if(!(v>0)){const a=T.typical(A.S,c.id);if(a)D.amt=String(a)}redraw();return}
  if(v>0){A.act.csave();return}
  const a=T.typical(A.S,c.id);if(a){D.amt=String(a);D.pick=true}redraw()};
+A.act.cedit=()=>{D.edit=!D.edit;redraw()};
+let RECARGA=null;const reCarga=()=>{if(!RECARGA)return;const k=RECARGA;RECARGA=null;setTimeout(()=>{A.openCarga();Object.assign(D,k);drawCarga()},320)};
+A.act.cedcat=b=>{RECARGA={...D};catForm(b.dataset.id,true)};
+A.act.subedit=b=>{const c=A.cat(D.c),x=(c.subs||[]).find(y=>y.id===b.dataset.id);if(!x)return;RECARGA={...D};
+ A.form("Detalle de "+c.n,[{k:"n",label:"Nombre",type:"text",v:x.n},{k:"v",label:"Es un gasto vital",type:"switch",v:!!x.v}],
+  {ok:"Guardar",extra:[{i:0,t:"Quitar este detalle",cls:"red",f:()=>{c.subs=c.subs.filter(y=>y!==x);A.S.mov.forEach(m=>{if(m.c===c.id&&m.s===x.id)delete m.s});(A.S.rec||[]).forEach(r=>{if(r.c===c.id&&r.s===x.id)delete r.s});A.persist();A.close();A.render();reCarga()}}],
+   save:v=>{if(!v.n.trim())return false;x.n=v.n.trim();x.v=v.v?1:undefined}})};
 A.act.cback=()=>{D.pick=false;D.c=null;D.s=null;redraw()};
 A.act.csub=b=>{D.s=b.dataset.id;if(A.parseAmt(D.amt)>0){A.act.csave();return}redraw()};
 A.act.subnew=()=>{const keep={...D},c=A.cat(D.c);
@@ -118,13 +125,13 @@ A.form=function(title,fields,o){
 };
 A.act.fsw=b=>{const on=b.dataset.v!=="1";b.dataset.v=on?1:0;b.classList.toggle("on",on)};
 function fvals(){const o={};A.$("#sheet").querySelectorAll("[data-k]").forEach(el=>{o[el.dataset.k]=el.tagName==="BUTTON"?el.dataset.v==="1":el.value});return o}
-A.act.fsave=()=>{const v=fvals();const r=F.o.save(v);if(r===false)return;A.persist();A.close();A.render();if(A._back){A._back=false;setTimeout(A.act.ajustes,340)}};
-A.act.fx=b=>{const x=F.o.extra[+b.dataset.i];x.f(fvals())};
+A.act.fsave=()=>{const v=fvals();const r=F.o.save(v);if(r===false)return;A.persist();A.close();A.render();if(A._back){A._back=false;setTimeout(A.act.ajustes,340)}reCarga()};
+A.act.fx=b=>{const x=F.o.extra[+b.dataset.i];x.f(fvals());reCarga()};
 
 /* ===== editar movimiento ===== */
 A.act.edit=b=>{const st=S(),m=st.mov.find(x=>x.id===b.dataset.id);if(!m)return;
  const f=[{k:"a",label:"Monto en pesos",type:"num",v:A.fmt2(m.a).replace(/\./g,"")},];
- if(m.t==="g"||m.t==="r")f.push({k:"cs",label:"Categoría",type:"select",v:A.csKey(m),opts:A.csOpts()});
+ if(m.t==="g"||m.t==="r")f.push({k:"cs",label:"Categoría",type:"select",v:A.csKey(m),opts:A.csOpts(A.csKey(m))});
  f.push({k:"d",label:"Fecha",type:"date",v:m.d},{k:"note",label:"Nota",type:"text",v:m.note||""});
  if(m.t==="g")f.push({k:"tag",label:"Etiqueta (viaje, mudanza…)",type:"text",v:m.tag||""});
  const extra=[];
@@ -209,13 +216,13 @@ A.act.cuota=b=>{const st=S(),x=st.spr.find(y=>y.id===b.dataset.id);if(!x)return;
   {ok:"Guardar",extra:[{i:0,t:"Ya terminé de pagarlas",cls:"ghost",f:()=>{x.ended=true;A.persist();A.close();A.render();A._back=false;setTimeout(A.act.ajustes,340)}},{i:1,t:"Borrar",cls:"red",f:()=>{st.spr=st.spr.filter(y=>y!==x);A.persist();A.close();A.render();A._back=false;setTimeout(A.act.ajustes,340)}}],
   save:v=>{const t=A.parseAmt(v.total),n=Math.round(A.parseAmt(v.n));if(!v.name.trim()||!(t>0)||!(n>=1))return false;Object.assign(x,{name:v.name.trim(),total:Math.round(t),n})}})};
 /* ===== categorías ===== */
-const PAL=["#FFC21A","#19D3C5","#FF4D8D","#FF3B30","#35D07F","#FF8A00","#3AA0FF","#A78BFA","#A3E635","#B5651D"];
+const PAL=["#FFC21A","#14B8A6","#FF4D8D","#FF3B30","#35D07F","#FF8A00","#8B5CF6","#E879F9","#A3E635","#A8683A"];
 function catForm(id,fromCarga){const st=S();const c=id?st.cats.find(x=>x.id===id):null;
  const prev=D&&fromCarga;
- const extra=c?[{i:0,t:"Borrar categoría",cls:"red",f:()=>{if(st.mov.some(m=>m.c===c.id)){A.toast("Tiene movimientos: no se puede borrar");return}st.cats=st.cats.filter(x=>x!==c);A.persist();A.close();A.render()}}]:[];
- A.form(c?"Categoría":"Nueva categoría",[{k:"n",label:"Nombre",type:"text",v:c?c.n:""},{k:"c",label:"Color",type:"select",v:c?c.c:PAL[0],opts:PAL.map((p,i)=>[p,["Amarillo","Verde agua","Rosa","Rojo","Verde","Naranja","Azul","Violeta","Lima","Marrón"][i]])},
+ const extra=c?[{i:0,t:c.hide?"Mostrar en la carga":"Ocultar de la carga",cls:"ghost",f:()=>{c.hide=c.hide?undefined:1;A.persist();A.close();A.render()}},{i:1,t:"Borrar categoría",cls:"red",f:()=>{if(st.mov.some(m=>m.c===c.id)){A.toast("Tiene movimientos: ocultala en vez de borrarla");return}st.cats=st.cats.filter(x=>x!==c);A.persist();A.close();A.render()}}]:[];
+ A.form(c?"Categoría":"Nueva categoría",[{k:"n",label:"Nombre",type:"text",v:c?c.n:""},{k:"c",label:"Color",type:"select",v:c?c.c:PAL[0],opts:PAL.map((p,i)=>[p,["Amarillo","Verde azulado","Rosa","Rojo","Verde","Naranja","Violeta","Fucsia","Lima","Marrón"][i]])},
   {k:"ic",label:"Ícono",type:"select",v:c?c.ic:"dots",opts:["cart","fuel","glass","car","bag","heart","home","plus","bolt","paw","book","gym","tv","wifi","cut","gift","coin","dots"].map(x=>[x,{cart:"Carrito",fuel:"Surtidor",glass:"Copa",car:"Auto",bag:"Bolsa",heart:"Corazón",home:"Casa",plus:"Cruz",bolt:"Rayo",paw:"Huella",book:"Libro",gym:"Pesas",tv:"Pantalla",wifi:"Wifi",cut:"Tijera",gift:"Regalo",coin:"Moneda",dots:"Puntos"}[x]])},
-  {k:"subs",label:"Detalles, separados por coma. Con * los que son vitales",type:"text",v:c?(c.subs||[]).map(x=>x.n+(x.v?"*":"")).join(", "):"",ph:"Alquiler*, Expensas*, Ropa…"},{k:"lim",label:"Límite mensual (opcional)",type:"num",v:c&&c.lim?String(c.lim):""},{k:"v",label:"Es un gasto vital",type:"switch",v:c?!!c.v:false}],
+  {k:"subs",label:"Detalles, separados por coma. Con * los que son vitales",type:"text",v:c?(c.subs||[]).map(x=>x.n+(x.v?"*":"")).join(", "):"",ph:"Alquiler*, Expensas*, Ropa…"},{k:"lim",label:"Límite mensual (opcional)",type:"num",v:c&&c.lim?String(c.lim):""},{k:"v",label:"Lo que cargues sin detalle cuenta como vital",type:"switch",v:c?!!c.v:false}],
   {extra,full:true,save:v=>{if(!v.n.trim())return false;const nm=(v.subs||"").split(",").map(x=>x.trim()).filter(Boolean).map(x=>({n:x.replace(/\*+$/,"").trim(),v:/\*$/.test(x)})).filter(x=>x.n),old=(c&&c.subs)||[],cid=c?c.id:"c"+T.uid();const subs=nm.map(q=>{const e=old.find(x=>x.n.toLowerCase()===q.n.toLowerCase());if(e){e.v=q.v?1:undefined;return e}return {id:cid+"."+T.uid(),n:q.n,v:q.v?1:undefined}});const o={n:v.n.trim(),c:v.c,ic:v.ic,subs,lim:A.parseAmt(v.lim)||undefined,v:v.v?1:undefined};if(c)Object.assign(c,o);else{const nc=Object.assign({id:cid},o);st.cats.push(nc);if(prev)setTimeout(()=>{A.openCarga();D.c=nc.id;D.more=true;drawCarga()},320)}}})}
 A.act.cat=b=>{A._back=true;catForm(b.dataset.id)};A.act.catnew=()=>{A._back=true;catForm(null)};
 
@@ -229,10 +236,10 @@ A.act.ajustes=()=>{const st=S();
  <div class="h3">Gastos fijos</div>${st.rec.filter(r=>r.kind==="gasto").map(recRow).join("")}<button class="go ghost" data-a="recnew" data-k="gasto" style="height:46px;margin-top:0">+ Gasto fijo</button>
  <div class="h3">Gastos anuales</div>${st.rec.filter(r=>r.kind==="anual").map(recRow).join("")}<button class="go ghost" data-a="recnew" data-k="anual" style="height:46px;margin-top:0">+ Gasto anual</button>
  <div class="h3">Cuotas</div>${st.spr.filter(x=>!x.ended).map(x=>`<button class="tile" data-a="cuota" data-id="${x.id}"><span class="m">${A.esc(x.name)}<small>${x.n} cuotas · desde ${A.monthName(x.start)}</small></span><span class="a" style="color:var(--cream)">$ ${A.fmt(Math.round(x.total/x.n))}</span></button>`).join("")||`<div class="note" style="margin:0 0 6px">Se cargan desde el + con el botón Cuotas.</div>`}
- <div class="h3">Categorías</div><div class="chips" style="margin-top:0">${st.cats.map(c=>`<button class="chip" data-a="cat" data-id="${c.id}"><i style="width:8px;height:8px;border-radius:4px;background:${c.c}"></i>${A.esc(c.n)}</button>`).join("")}<button class="chip" data-a="catnew">+ Nueva</button></div>
+ <div class="h3">Categorías</div><div class="chips" style="margin-top:0">${st.cats.map(c=>`<button class="chip" data-a="cat" data-id="${c.id}"><i style="width:8px;height:8px;border-radius:4px;background:${c.c}"></i>${A.esc(c.n)}${c.hide?" (oculta)":""}</button>`).join("")}<button class="chip" data-a="catnew">+ Nueva</button></div>
  ${A.rulesHtml()}
  <div class="h3">Respaldo</div><div class="two"><button class="go ghost" data-a="export" style="margin:0;height:46px">Exportar todo</button><label class="go ghost" style="margin:0;height:46px;line-height:46px;display:block;cursor:pointer">Importar<input type="file" id="imp" accept=".json,application/json" hidden></label></div>
- <div class="note" style="text-align:center;margin-top:16px">Tope v5 · versión 13</div><button class="go red" data-a="reset" style="margin-top:22px;height:46px">Borrar todo y empezar de nuevo</button></div>`,{part:true,onClose:saveAjustes});};
+ <div class="note" style="text-align:center;margin-top:16px">Tope v5 · versión 14</div><button class="go red" data-a="reset" style="margin-top:22px;height:46px">Borrar todo y empezar de nuevo</button></div>`,{part:true,onClose:saveAjustes});};
 document.addEventListener("input",e=>{if(e.target.id==="as"||e.target.id==="afx")saveAjustes(true)});
 function saveAjustes(quiet){const st=S(),a=A.$("#as"),f=A.$("#afx");if(a){const v=Math.round(A.parseAmt(a.value));if(v>=0&&v<=90)st.cfg.savePct=v}if(f){const v=A.parseAmt(f.value);if(v>0&&v!==st.cfg.fx){st.cfg.fx=v;st.cfg.fxAuto=false}}A.persist();if(!quiet)A.render()}
 A.act.fxget=async b=>{const n=A.$("#fxn");n.textContent="Buscando…";const v=await A.fetchFx(true);if(v){A.$("#afx").value=String(v);n.textContent="Dólar MEP de hoy: $ "+A.fmt(v)+". Se actualiza solo al abrir la app."}else n.textContent="No pude traerlo (¿sin señal?). Cargalo a mano."};

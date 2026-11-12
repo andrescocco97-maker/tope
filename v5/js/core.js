@@ -17,15 +17,15 @@ const R=n=>Math.round(n);
 const slug=x=>x.toLowerCase().normalize("NFD").replace(/[^a-z]/g,"");
 const GR=[
  ["comida","Comida","cart","#FFC21A",[["Supermercado",1],["Verdulería",1],["Carnicería",1],["Panadería",1],["Dietética",1],["Otros comestibles"],["Delivery"],["Restaurante"]]],
- ["mascota","Mascota","paw","#C77B3F",[["Alimento",1],["Veterinaria",1]]],
+ ["mascota","Mascota","paw","#A8683A",[["Alimento",1],["Veterinaria",1]]],
  ["compras","Compras","bag","#FF3B30",[["Farmacia y belleza",1],["Salud",1],["Electrónica y accesorios"],["Hogar y jardín"],["Papelería y herramientas"],["Regalos y alegrías"],["Ropa y calzado"],["Imprevistos"]]],
- ["vivienda","Vivienda","home","#3AA0FF",[["Alquiler",1],["Expensas",1],["Electricidad",1],["Gas",1],["Mantenimiento y reparaciones",1],["Seguro de propiedad"]]],
- ["transp","Transporte","car","#A78BFA",[],1],
- ["vehiculo","Vehículo","fuel","#19D3C5",[["Combustible",1],["Estacionamiento"],["Mantenimiento"],["Seguro"]]],
+ ["vivienda","Vivienda","home","#35D07F",[["Alquiler",1],["Expensas",1],["Electricidad",1],["Gas",1],["Mantenimiento y reparaciones",1],["Seguro de propiedad"]]],
+ ["transp","Transporte","car","#8B5CF6",[],1],
+ ["vehiculo","Vehículo","fuel","#FF8A00",[["Combustible",1],["Estacionamiento"],["Mantenimiento"],["Seguro"]]],
  ["vida","Vida y entretenimiento","glass","#FF4D8D",[["Peluquería"],["Bienestar y belleza"],["Salud y doctor",1],["Cultura y eventos deportivos"],["Deporte y fitness"],["Educación y desarrollo personal"],["Juntadas"],["Libros, audio y suscripciones"],["Pasatiempos"],["TV y streaming"],["Vacaciones y viajes"]]],
- ["comunic","Comunicación y PC","wifi","#35D07F",[["Internet",1],["Teléfono y móvil",1],["Software, apps y juegos"]]],
- ["finanzas","Gastos financieros","coin","#FF8A00",[["Asesoramiento"],["Cargos y comisiones"],["Impuestos"],["Multas"],["Ejercicio profesional"],["Préstamos e intereses"],["Seguros"]]],
- ["otros","Otros","dots","#9CA3AF",[]]
+ ["comunic","Comunicación y PC","wifi","#14B8A6",[["Internet",1],["Teléfono y móvil",1],["Software, apps y juegos"]]],
+ ["finanzas","Gastos financieros","coin","#A3E635",[["Asesoramiento"],["Cargos y comisiones"],["Impuestos"],["Multas"],["Ejercicio profesional"],["Préstamos e intereses"],["Seguros"]]],
+ ["otros","Otros","dots","#8E8A80",[]]
 ];
 const mk=g=>({id:g[0],n:g[1],ic:g[2],c:g[3],v:g[5]?1:undefined,subs:g[4].map(x=>({id:g[0]+"."+slug(x[0]),n:x[0],v:x[1]?1:undefined}))});
 const CATS=GR.map(mk);
@@ -35,7 +35,7 @@ const OLDSUB={"compras.ropa":"compras.ropaycalzado","compras.perfumeria":"compra
 const isOld=S=>S.cats.some(c=>c.id==="super"||c.id==="comb"||c.id==="casa"||c.id==="servicios");
 /* pasa datos viejos al formato nuevo */
 function migrate(S){
- if(S.colv!==2){const M={vivienda:"#3AA0FF",comunic:"#35D07F",finanzas:"#FF8A00"};(S.cats||[]).forEach(c=>{if(M[c.id])c.c=M[c.id]});S.colv=2}
+ if(S.colv!==3){const M={mascota:"#A8683A",vivienda:"#35D07F",transp:"#8B5CF6",vehiculo:"#FF8A00",comunic:"#14B8A6",finanzas:"#A3E635",otros:"#8E8A80"};(S.cats||[]).forEach(c=>{if(M[c.id])c.c=M[c.id]});S.colv=3}
  if(isOld(S)){
   const keep=S.cats.filter(c=>/^c/.test(c.id)&&!OLDMAP[c.id]);
   const lim={};S.cats.forEach(c=>{if(c.lim){const m=OLDMAP[c.id];if(m)lim[m[0]]=Math.max(lim[m[0]]||0,c.lim)}});

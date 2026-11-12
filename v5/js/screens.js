@@ -13,7 +13,7 @@ function shiftR(per,today,off){
  if(per==="semana"){const d=T.fromIso(today);d.setDate(d.getDate()-7*off);const r=range("semana",T.iso(d));return {r,lab:off?A.dateShort(r.from)+" al "+A.dateShort(r.to):"Esta semana"}}
  if(per==="anio"){const y=+today.slice(0,4)-off;return {r:{from:y+"-01-01",to:y+"-12-31"},lab:off?String(y):"Este año"}}
  return {r:range(per,today),lab:""}}
-function dnav(per,dr){if(!(per==="mes"||per==="semana"||per==="anio"))return "";return `<span class="dnav"><button data-a="doff" data-d="1" aria-label="Anterior">‹</button><span>${dr.lab}</span><button data-a="doff" data-d="-1" aria-label="Siguiente" ${(A._doff||0)<=0?"disabled":""}>›</button></span>`}
+function dnav(per,dr){if(!(per==="mes"||per==="semana"||per==="anio"))return "";return `<span class="dnav"><button data-a="doff" data-d="1" aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><span>${dr.lab}</span><button data-a="doff" data-d="-1" aria-label="Siguiente" ${(A._doff||0)<=0?"disabled":""}><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button></span>`}
 A.act.doff=b=>{A._doff=Math.max(0,(A._doff||0)+ +b.dataset.d);A._sel=null;A._drill=null;A.renderHoy()};
 function ruler(per,today){
  const d=T.fromIso(today);let n,idx,txt;
@@ -36,8 +36,11 @@ function slices(S,r,drill){
  const tot=ent.reduce((s,e)=>s+e[1],0)+ah;
  let main=ent.filter((e,i)=>i<6&&e[1]/tot>=.04),rest=ent.filter(e=>!main.includes(e));
  const segs=main.map(([id,v])=>({id,n:A.cat(id).n,c:A.cat(id).c,v}));
- if(rest.length)segs.push({id:"otros",n:"Otros",c:"#6B7280",v:rest.reduce((s,e)=>s+e[1],0),sub:rest});
+ if(rest.length)segs.push({id:"otros",n:"Otros",c:"#7A756A",v:rest.reduce((s,e)=>s+e[1],0),sub:rest});
  if(ah>0)segs.push({id:"_ah",n:"Ahorro",c:AHC,v:ah});
+ /* nunca dos porciones del mismo color */
+ const FB=["#FFC21A","#FF3B30","#35D07F","#8B5CF6","#FF8A00","#FF4D8D","#14B8A6","#A3E635","#E879F9","#A8683A"],used=new Set([AHC.toLowerCase(),"#7a756a"]);
+ segs.forEach(sg=>{if(sg.id==="_ah"||sg.id==="otros")return;let c=sg.c.toLowerCase();if(used.has(c)){c=(FB.find(x=>!used.has(x.toLowerCase()))||c).toLowerCase();sg.c=c}used.add(c)});
  return {segs,tot};
 }
 function donutSvg(sl,sel){
@@ -45,7 +48,7 @@ function donutSvg(sl,sel){
  const P=(r,a)=>[(100+r*Math.cos(a)).toFixed(2),(100+r*Math.sin(a)).toFixed(2)];
  sl.segs.forEach(s=>{const on=sel===s.id,dim=sel&&!on,full=C*s.v/sl.tot,ex=on?4:0,op=dim?.3:1;let el;
   if(n===1)el=`<circle data-a="slice" data-i="${s.id}" cx="100" cy="100" r="${R0}" stroke="${s.c}" stroke-width="${W+ex*2}" style="cursor:pointer"/>`;
-  else{const gap=4,ins=2,sg=gap/2+ins; // esquinas apenas redondeadas: sector con borde del mismo color
+  else{const gap=8,ins=2,sg=gap/2+ins; // esquinas apenas redondeadas: sector con borde del mismo color
    const a0=-Math.PI/2+(off+sg)/R0,a1=-Math.PI/2+(off+full-sg)/R0;const w=Math.max(a1-a0,.02),b0=a0,b1=a0+w;
    const ro=R0+W/2+ex-ins,ri=R0-W/2-ex+ins,lg=w>Math.PI?1:0;const [x1,y1]=P(ro,b0),[x2,y2]=P(ro,b1),[x3,y3]=P(ri,b1),[x4,y4]=P(ri,b0);
    el=`<path data-a="slice" data-i="${s.id}" d="M${x1} ${y1}A${ro} ${ro} 0 ${lg} 1 ${x2} ${y2}L${x3} ${y3}A${ri} ${ri} 0 ${lg} 0 ${x4} ${y4}Z" fill="${s.c}" stroke="${s.c}" stroke-width="${ins*2}" stroke-linejoin="round" style="cursor:pointer;transition:opacity .18s" opacity="${op}"/>`}
@@ -74,7 +77,7 @@ A.drawDonut=function(){
  else if(A._drill)det=`<div class="dets">${sl.segs.map(x=>`<button class="dr" data-a="slice" data-i="${x.id}"><i style="background:${x.c}"></i><span>${A.esc(x.n)}</span><em>${Math.round(x.v/sl.tot*100)}%</em><b>${A.money(x.v)}</b></button>`).join("")}</div>`;
  else det="";
  const back=A._drill?`<button class="addl" style="padding:6px 0" data-a="slice" data-i="">‹ Volver a todo</button>`:"";
- el.innerHTML=sl.tot?`<div class="dn"><div class="dsvg">${donutSvg(sl,sel)}<button class="dc" data-a="slice" data-i="">${center}</button></div></div>${back}${det}`:`<div class="empty" style="padding:26px 0">Todavía no hay movimientos en este período.</div>`;
+ el.innerHTML=sl.tot?`<div class="dn"><div class="dsvg">${donutSvg(sl,sel)}<button class="dc" data-a="slice" data-i="">${center}</button></div></div><div class="dleg">${sl.segs.map(x=>`<button data-a="slice" data-i="${x.id}"><i style="background:${x.c}"></i>${A.esc(x.n)}</button>`).join("")}</div>${back}${det}`:`<div class="empty" style="padding:26px 0">Todavía no hay movimientos en este período.</div>`;
 };
 A.act.slice=b=>{const id=b.dataset.i;
  if(!id){if(A._sel)A._sel=null;else A._drill=null;A.drawDonut();return}
