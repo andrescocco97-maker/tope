@@ -7,7 +7,7 @@ const rng=k=>[k+"-01",k+"-31"];
 function ingMes(S,k){return S.mov.filter(m=>m.t==="i"&&T.incomeMonthOf(m.d,m.feeds)===k).reduce((s,m)=>s+m.a,0)}
 function mes(S,k){const [a,b]=rng(k);return {k,gasto:T.spentRange(S,a,b),ahorro:T.ahorroRange(S,a,b),ing:ingMes(S,k),by:T.byCat(S,a,b)}}
 function delta(c,p,goodDown){ // flecha y color; en gastos subir es malo
- if(!(p>0))return c>0?`<em class="dl0">nuevo</em>`:"";
+ if(!(p>0))return "";
  const d=(c-p)/p*100;if(Math.abs(d)<1)return `<em class="dl0">igual</em>`;
  const up=d>0,bad=goodDown?up:!up;return `<em class="${bad?"dbad":"dok"}">${up?"▲":"▼"} ${Math.abs(Math.round(d))}%</em>`}
 A.renderAn=function(box){
@@ -31,9 +31,9 @@ A.renderAn=function(box){
   let subs="";if(open){const sb=T.bySub(S,a,b,id),sp=T.bySub(S,...rng(T.addM(k,-1)),id);subs=Object.entries(sb).sort((x,y)=>y[1]-x[1]).map(([sid,sv],i,arr)=>`<div class="ansub"><i style="background:${A.subc(c.c,i,arr.length)}"></i><span>${A.esc(sid==="_"?"Sin detalle":A.subName(id,sid)||"Otro")}</span>${delta(sv,sp[sid]||0,true)}<b>${A.money(sv)}</b></div>`).join("")}
   return `<button class="ancat" data-a="anopen" data-id="${id}"><span class="anh"><i style="background:${c.c}"></i><b>${A.esc(c.n)}</b>${delta(v,p,true)}<span class="anv">${A.money(v)}</span></span><span class="anb"><i style="width:${v/tot*100}%;background:${c.c}"></i></span></button>${subs}`}).join("");
  // pronóstico
- let fc="";if(k===cur){const dd=+today.slice(8),dm=T.dim(k);if(dd>=3&&M.gasto>0){const fx=S.mov.filter(m=>(m.t==="g"||m.t==="r")&&m.rid&&m.d>=a&&m.d<=b).reduce((q,m)=>q+(m.t==="r"?-m.a:m.a),0),est=fx+(M.gasto-fx)/dd*dm;fc=`<div class="anrow"><span>Al ritmo de hoy cerrás el mes en</span><b>${A.money(est)}</b></div>${avg>0?`<div class="anrow sm"><span>Tu promedio de los meses anteriores</span><b>${A.money(avg)}</b></div>`:""}`}}
+ let fc="";if(k===cur){const dd=+today.slice(8),dm=T.dim(k);if(dd>=7&&M.gasto>0){const fx=S.mov.filter(m=>(m.t==="g"||m.t==="r")&&m.rid&&m.d>=a&&m.d<=b).reduce((q,m)=>q+(m.t==="r"?-m.a:m.a),0),est=fx+(M.gasto-fx)/dd*dm;fc=`<div class="anrow"><span>Al ritmo de hoy cerrás el mes en</span><b>${A.money(est)}</b></div>${avg>0?`<div class="anrow sm"><span>Tu promedio de los meses anteriores</span><b>${A.money(avg)}</b></div>`:""}`}}
  // metas
- const goals=S.goals.map(g=>{const t=A.goalTarget(g),sv=T.goalSaved(S,g),p=t>0?Math.min(100,sv/t*100):0,mo=T.goalMonthly(S,g),rem=Math.max(0,t-sv),meses=mo>0?Math.ceil(rem/mo):null;
+ const goals=S.goals.map(g=>{const t=A.goalTarget(g),sv=T.goalSaved(S,g),p=t>0?Math.min(100,sv/t*100):0,mo=T.goalMonthly(S,g,A.today()),rem=Math.max(0,t-sv),meses=mo>0?Math.ceil(rem/mo):null;
   return `<div class="angoal"><span class="anh"><b>${A.esc(g.name)}</b><span class="anv">${Math.round(p)}%</span></span><span class="anb"><i style="width:${p}%;background:#F3EBDD"></i></span><small>${p>=100?"Meta cumplida":meses?"Al ritmo actual faltan "+(meses>=12?Math.floor(meses/12)+" a "+(meses%12?meses%12+" m":""):meses+" meses"):"Todavía no hay aportes para estimar"}</small></div>`}).join("");
  const ins=[];const YA=mes(S,T.addM(k,-12));if(YA.gasto>0&&M.gasto>0){const d=Math.round((M.gasto-YA.gasto)/YA.gasto*100);ins.push(`Contra ${A.monthName(T.addM(k,-12))}: gastaste ${Math.abs(d)}% ${d>=0?"más":"menos"}.`)}
  if(P.gasto>0&&M.gasto>0){const top=ent.map(([id,v])=>({id,v,p:P.by[id]||0})).filter(x=>x.p>0&&x.v>x.p).sort((x,y)=>(y.v-y.p)-(x.v-x.p))[0];if(top)ins.push(`${A.cat(top.id).n} fue lo que más subió: ${A.money(top.v-top.p)} más que el mes pasado.`)}

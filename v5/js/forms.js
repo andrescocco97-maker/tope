@@ -53,11 +53,11 @@ function drawCarga(){
   <button class="sw ${D.next?"on":""}" data-a="cnext"><span>Es para el mes que viene</span><i></i></button><button class="go" data-a="csave" ${v>0?"":"disabled"}>Guardar ingreso</button>`;
  }
  const noteRow="";
- const noteIn=(t==="e"&&!D.sp&&!D.cu)?`<input class="nin" id="dnote" placeholder="Nota (opcional)" value="${A.esc(D.note)}" autocomplete="off" aria-label="Nota">`:"";
+ const noteIn=(t==="e"&&!D.sp&&!D.cu)?`<input class="nin" id="dnote" placeholder="Nota (opcional)" value="${A.esc(D.note)}" autocomplete="off" aria-label="Nota"><div id="sugg" class="sugg"></div>`:"";
  const chips=`<label class="chip" style="position:relative">${dl}<input type="date" id="cd" value="${D.d}" style="position:absolute;inset:0;opacity:0;width:100%" aria-label="Fecha"></label>`+(t==="e"&&!D.sp?`<button class="chip ${D.usd?"on":""}" data-a="cusd">USD</button><button class="chip ${D.cu?"on":""}" data-a="ccu">Cuotas</button>`:"");
  setSheet(`<div class="ctop"><div class="sh-head" style="padding:calc(var(--safe-t) + 4px) 0 0"><div class="chips" style="margin:0;align-items:center">${chips}</div><button class="xbtn" data-a="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="${A.P.x}"/></svg></button></div>
  <div class="tcs">${TYPES.map(x=>`<button class="${t===x[0]?"on":""}" data-a="ctype" data-t="${x[0]}">${x[1]}</button>`).join("")}</div>
- <div class="amt"><div><span class="cur">${D.usd&&t==="e"?"USD":"$"}</span>${amtView()}</div></div>${noteIn}</div><div class="cmid">${noteRow}${body}</div><div class="ckeys">${keypad}</div>`);
+ <div class="amt"><div><span class="cur">${D.usd&&t==="e"?"USD":"$"}</span>${amtView()}</div></div>${noteIn}</div><div class="cmid">${noteRow}${body}</div><div class="ckeys">${keypad}</div>`);sugg()
 }
 A.openCarga=function(){RECARGA=null;D={s:null,pick:false,t:"e",sp:null,amt:"",usd:false,pu:false,c:null,d:A.today(),note:"",n:3,cu:false,u:"",goal:null,inv:null,next:false,more:false,det:false,rid:null,occ:null};A.sheet("",{cls:"carga"});drawCarga()};
 A.act.fabopen=A.openCarga;
@@ -82,6 +82,9 @@ A.act.ccat=b=>{const c=A.cat(b.dataset.id);D.c=c.id;D.s=null;const v=A.parseAmt(
  if(c.subs&&c.subs.length){D.pick=true;if(!(v>0)){const a=T.typical(A.S,c.id);if(a)D.amt=String(a)}redraw();return}
  if(v>0){A.act.csave();return}
  const a=T.typical(A.S,c.id);if(a){D.amt=String(a);D.pick=true}redraw()};
+function sugg(){const el=document.getElementById("sugg");if(!el)return;const rl=A.ruleFor&&A.ruleFor(D.note);
+ el.innerHTML=rl&&!(D.c===rl.c&&(D.s||undefined)===rl.s)?`<button data-a="csugg" class="chip on">${A.esc(A.subName(rl.c,rl.s)||A.cat(rl.c).n)} · tocá para elegir</button>`:""}
+A.act.csugg=()=>{const rl=A.ruleFor(D.note);if(!rl)return;D.c=rl.c;D.s=rl.s;if(A.parseAmt(D.amt)>0){A.act.csave();return}const c=A.cat(rl.c);if(c.subs&&c.subs.length)D.pick=true;redraw()};
 A.act.cedit=()=>{D.edit=!D.edit;redraw()};
 let RECARGA=null;const reCarga=()=>{if(!RECARGA)return;const k=RECARGA;RECARGA=null;setTimeout(()=>{A.openCarga();Object.assign(D,k);drawCarga()},320)};
 A.act.cedcat=b=>{RECARGA={...D};catForm(b.dataset.id,true)};
@@ -96,16 +99,16 @@ A.act.subnew=()=>{const keep={...D},c=A.cat(D.c);
 A.ahorrarMonto=v=>{A.openCarga();D.sp="a";D.amt=String(Math.max(0,Math.round(v)));drawCarga()};
 A.act.ahorrar=()=>{const k=A.today().slice(0,7),m=T.calc(A.S,k,A.today()).ahorro,reg=T.ahorroRange(A.S,k+"-01",k+"-31");A.openCarga();D.sp="a";D.amt=String(Math.max(0,Math.round(m-reg)));drawCarga()};
 document.addEventListener("change",e=>{if(e.target.id==="cd"&&D){D.d=e.target.value||A.today();redraw()}});
-document.addEventListener("input",e=>{if(!D)return;if(e.target.id==="dn"||e.target.id==="dnote")D.note=e.target.value;if(e.target.id==="du"){D.u=e.target.value}});
+document.addEventListener("input",e=>{if(!D)return;if(e.target.id==="dn"||e.target.id==="dnote"){D.note=e.target.value;sugg()}if(e.target.id==="du"){D.u=e.target.value}});
 function limMsg(m,st){const c=m.t==="g"&&st.cats.find(x=>x.id===m.c);if(!c||!(c.lim>0))return null;const k=m.d.slice(0,7),g=T.byCat(st,k+"-01",k+"-31")[c.id]||0,b=g-m.a;
  if(b<c.lim&&g>=c.lim)return c.n+": te pasaste del límite";if(b<c.lim*.8&&g>=c.lim*.8)return c.n+": ya usaste el "+Math.round(g/c.lim*100)+"% del límite";return null}
 function commit(m,msg){const st=A.S;st.mov.push(m);msg=limMsg(m,st)||msg;A.persist();A.close();A.render();A.buzz(18);A.toast(msg||"Anotado",()=>{st.mov=st.mov.filter(x=>x.id!==m.id);A.persist();A.render()})}
 A.act.csave=()=>{const st=A.S,v=A.parseAmt(D.amt);if(!(v>0))return;const t=D.t,fx=st.cfg.fx||1;
- if(t==="i"){const r=D.rid&&st.rec.find(x=>x.id===D.rid);commit(r?{id:T.uid(),t:"i",a:Math.round(v),d:D.d,note:r.name,rid:r.id,occ:D.occ,feeds:r.feeds||"cur"}:{id:T.uid(),t:"i",a:Math.round(v),d:D.d,note:D.note.trim()||undefined,feeds:D.next?"next":"cur"});if(!r)setTimeout(()=>A.bigIncome&&A.bigIncome(Math.round(v)),500);return}
- if(D.sp==="a"){const u=A.parseAmt(D.u);commit({id:T.uid(),t:"a",a:Math.round(v),u:u||undefined,fx:u?v/u:undefined,goal:D.goal||undefined,inv:D.inv||undefined,d:D.d},D.inv?"Sumado a "+(st.inv.find(i=>i.id===D.inv)||{}).name:"Ahorro anotado");return}
+ if(t==="i"){const r=D.rid&&st.rec.find(x=>x.id===D.rid);commit(r?{id:T.uid(),t:"i",a:Math.round(v),d:D.d,note:r.name,rid:r.id,occ:D.occ,feeds:r.feeds||"cur"}:(()=>{const mi={id:T.uid(),t:"i",a:Math.round(v),d:D.d,note:D.note.trim()||undefined,feeds:D.next?"next":"cur"};const mt=T.matchIncome(st,mi);if(mt&&!D.next)Object.assign(mi,mt);return mi})());if(!r)setTimeout(()=>A.bigIncome&&A.bigIncome(Math.round(v)),500);return}
+ if(D.sp==="a"){const u=A.parseAmt(D.u);commit({id:T.uid(),t:"a",a:Math.round(v),u:u||undefined,fx:u?v/u:(st.cfg.fx||undefined),goal:D.goal||undefined,inv:D.inv||undefined,d:D.d},D.inv?"Sumado a "+(st.inv.find(i=>i.id===D.inv)||{}).name:"Ahorro anotado");return}
  if(D.sp==="d"){commit({id:T.uid(),t:"d",a:Math.round(v),d:D.d,note:D.note.trim()||undefined});return}
  if(!D.c){const rl=A.ruleFor&&A.ruleFor(D.note);if(rl){D.c=rl.c;D.s=rl.s}}
- if(!D.c){const rl=A.ruleFor&&A.ruleFor(D.note);if(rl){D.c=rl.c;D.s=rl.s}}if(!D.c)return;
+if(!D.c)return;
  if(D.cu){const k=A.today().slice(0,7);const tot=Math.round(D.usd?v*fx:v);const sp={id:T.uid(),name:D.note.trim()||A.cat(D.c).n,total:tot,n:D.n,start:T.addM(k,1),c:D.c};st.spr.push(sp);A.persist();A.close();A.render();A.buzz(18);A.toast("Repartido en "+D.n+" cuotas",()=>{st.spr=st.spr.filter(x=>x!==sp);A.persist();A.render()});return}
  const m={id:T.uid(),t:"g",a:Math.round(D.usd?v*fx:v),c:D.c,d:D.d,note:D.note.trim()||undefined};if(D.s&&D.s!=="_")m.s=D.s;if(D.usd){m.u=v;m.fx=fx;if(D.pu)m.pu=true}commit(m,A.learn&&A.learn(m))};
 A.act.newcat=()=>catForm(null,true);
@@ -153,7 +156,7 @@ A.act.pago=b=>{const st=S(),r=st.rec.find(x=>x.id===b.dataset.rid);if(!r)return;
    A.toast("Pago cancelado",()=>{delete r.skip[occ];A.persist();A.render()})}}];
  A.form(r.name,[{k:"a",label:"Monto",type:"num",v:String(Math.round(a0))},{k:"d",label:"Vence el",type:"date",v:d0},
   ...(annual?[{type:"note",label:"Sale del fondo de anuales: no cuenta como gasto nuevo."}]:r.every>1||r.unit==="w"||r.once?[]:[{type:"note",label:"Si cambiás la fecha o el monto, vale solo para este mes."}])],
-  {ok:"Ya lo pagué",extra,save:v=>{const a=A.parseAmt(v.a);if(!(a>0))return false;st.mov.push({id:T.uid(),t:"g",a:Math.round(a),c:r.c||"otros",s:r.s,d:A.today(),note:r.name,rid:r.id,occ});A.buzz(18)}})};
+  {ok:"Ya lo pagué",extra,save:v=>{const a=A.parseAmt(v.a);if(!(a>0))return false;const mv={id:T.uid(),t:"g",a:Math.round(a),c:r.c||"otros",s:r.s,d:A.today(),note:r.name,rid:r.id,occ};st.mov.push(mv);A.buzz(18);A.toast("Pago anotado",()=>{st.mov=st.mov.filter(x=>x!==mv);A.persist();A.render()})}})};
 A.act.pagonuevo=()=>{const st=S();
  A.form("Nuevo pago",[{k:"name",label:"¿Qué es?",type:"text",ph:"Alquiler, seguro, cuota…"},{k:"a",label:"Monto",type:"num",v:""},{k:"d",label:"Vence el",type:"date",v:A.today()},
   {k:"rep",label:"Se repite todos los meses",type:"switch",v:false},{k:"cs",label:"Categoría",type:"select",v:"vivienda|vivienda.alquiler",opts:A.csOpts()}],
@@ -163,7 +166,7 @@ A.act.pagonuevo=()=>{const st=S();
    else st.rec.push({...base,once:true,date:v.d})}})};
 A.act.cobre=b=>{const st=S(),r=st.rec.find(x=>x.id===b.dataset.rid);if(!r)return;
  A.form("Cobré: "+r.name,[{k:"a",label:"¿Cuánto cobraste?",type:"num",v:String(Math.round(r.a))},{k:"d",label:"Fecha",type:"date",v:A.today()},{type:"note",label:"La diferencia con lo estimado se reparte en lo que queda del mes."}],
-  {ok:"Confirmar cobro",save:v=>{const a=A.parseAmt(v.a);if(!(a>0))return false;st.mov.push({id:T.uid(),t:"i",a:Math.round(a),d:v.d,note:r.name,rid:r.id,occ:b.dataset.occ,feeds:r.feeds||"cur"});A.buzz(18)}})};
+  {ok:"Confirmar cobro",save:v=>{const a=A.parseAmt(v.a);if(!(a>0))return false;const mv={id:T.uid(),t:"i",a:Math.round(a),d:v.d,note:r.name,rid:r.id,occ:b.dataset.occ,feeds:r.feeds||"cur"};st.mov.push(mv);A.buzz(18);A.toast("Cobro anotado",()=>{st.mov=st.mov.filter(x=>x!==mv);A.persist();A.render()})}})};
 
 /* ===== metas, inversiones, deudas, control ===== */
 function goalForm(g){const isNew=!g;g=g||{id:T.uid(),name:"",cur:"USD",a:0,pct:0,saved0:0,ic:"home"};const st=S();
@@ -213,7 +216,7 @@ A.act.rec=b=>{A._back=true;recForm(b.dataset.id)};A.act.recnew=b=>{A._back=true;
 
 A.act.cuota=b=>{const st=S(),x=st.spr.find(y=>y.id===b.dataset.id);if(!x)return;A._back=true;
  A.form("Cuotas",[{k:"name",label:"¿Qué es?",type:"text",v:x.name},{k:"total",label:"Total",type:"num",v:String(x.total)},{k:"n",label:"Cantidad de cuotas",type:"num",v:String(x.n)}],
-  {ok:"Guardar",extra:[{i:0,t:"Ya terminé de pagarlas",cls:"ghost",f:()=>{x.ended=true;A.persist();A.close();A.render();A._back=false;setTimeout(A.act.ajustes,340)}},{i:1,t:"Borrar",cls:"red",f:()=>{st.spr=st.spr.filter(y=>y!==x);A.persist();A.close();A.render();A._back=false;setTimeout(A.act.ajustes,340)}}],
+  {ok:"Guardar",extra:[{i:0,t:"Ya terminé de pagarlas",cls:"ghost",f:()=>{x.ended=true;x.endM=A.today().slice(0,7);A.persist();A.close();A.render();A._back=false;setTimeout(A.act.ajustes,340)}},{i:1,t:"Borrar",cls:"red",f:()=>{st.spr=st.spr.filter(y=>y!==x);A.persist();A.close();A.render();A._back=false;setTimeout(A.act.ajustes,340)}}],
   save:v=>{const t=A.parseAmt(v.total),n=Math.round(A.parseAmt(v.n));if(!v.name.trim()||!(t>0)||!(n>=1))return false;Object.assign(x,{name:v.name.trim(),total:Math.round(t),n})}})};
 /* ===== categorías ===== */
 const PAL=["#FFC21A","#14B8A6","#FF4D8D","#FF3B30","#35D07F","#FF8A00","#8B5CF6","#E879F9","#A3E635","#A8683A"];
@@ -233,18 +236,22 @@ A.act.ajustes=()=>{const st=S();
  <div class="two"><label class="fld"><span>Ahorro del mes (%)</span><input id="as" inputmode="numeric" value="${st.cfg.savePct}"></label><label class="fld"><span>Dólar MEP ($)</span><input id="afx" inputmode="decimal" value="${A.fmt2(st.cfg.fx).replace(/\./g,"")}"></label></div>
  <button class="go ghost" data-a="fxget" style="height:46px;margin-top:10px">Traer el dólar de hoy</button><div class="note" id="fxn">${st.cfg.fxAuto===false?"Está fijo a mano. Tocá el botón para volver al automático.":st.cfg.fxAt?"Automático · actualizado "+new Date(st.cfg.fxAt).toLocaleString("es-AR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"Se actualiza solo al abrir la app."}</div>
  <div class="h3">Ingresos</div>${st.rec.filter(r=>r.kind==="ingreso").map(recRow).join("")}<button class="go ghost" data-a="recnew" data-k="ingreso" style="height:46px;margin-top:0">+ Ingreso que se repite</button>
- <div class="h3">Gastos fijos</div>${st.rec.filter(r=>r.kind==="gasto").map(recRow).join("")}<button class="go ghost" data-a="recnew" data-k="gasto" style="height:46px;margin-top:0">+ Gasto fijo</button>
+ <div class="h3">Gastos fijos</div>${st.rec.filter(r=>r.kind==="gasto").map(recRow).join("")}<button class="go ghost" data-a="recnew" data-k="gasto" style="height:46px;margin-top:0">+ Gasto fijo</button>${A.inflHtml?A.inflHtml():""}
  <div class="h3">Gastos anuales</div>${st.rec.filter(r=>r.kind==="anual").map(recRow).join("")}<button class="go ghost" data-a="recnew" data-k="anual" style="height:46px;margin-top:0">+ Gasto anual</button>
  <div class="h3">Cuotas</div>${st.spr.filter(x=>!x.ended).map(x=>`<button class="tile" data-a="cuota" data-id="${x.id}"><span class="m">${A.esc(x.name)}<small>${x.n} cuotas · desde ${A.monthName(x.start)}</small></span><span class="a" style="color:var(--cream)">$ ${A.fmt(Math.round(x.total/x.n))}</span></button>`).join("")||`<div class="note" style="margin:0 0 6px">Se cargan desde el + con el botón Cuotas.</div>`}
  <div class="h3">Categorías</div><div class="chips" style="margin-top:0">${st.cats.map(c=>`<button class="chip" data-a="cat" data-id="${c.id}"><i style="width:8px;height:8px;border-radius:4px;background:${c.c}"></i>${A.esc(c.n)}${c.hide?" (oculta)":""}</button>`).join("")}<button class="chip" data-a="catnew">+ Nueva</button></div>
  ${A.rulesHtml()}${A.shareHtml?A.shareHtml():""}${A.pinHtml?A.pinHtml():""}
  <div class="h3">Respaldo</div><div class="two"><button class="go ghost" data-a="export" style="margin:0;height:46px">Exportar todo</button><label class="go ghost" style="margin:0;height:46px;line-height:46px;display:block;cursor:pointer">Importar<input type="file" id="imp" accept=".json,application/json" hidden></label></div>
- <div class="note" style="text-align:center;margin-top:16px">Tope v5 · versión 16</div><button class="go red" data-a="reset" style="margin-top:22px;height:46px">Borrar todo y empezar de nuevo</button></div>`,{part:true,onClose:saveAjustes});};
+ <div class="note" style="text-align:center;margin-top:16px">Tope v5 · versión 17</div><button class="go red" data-a="reset" style="margin-top:22px;height:46px">Borrar todo y empezar de nuevo</button></div>`,{part:true,onClose:saveAjustes});};
 document.addEventListener("input",e=>{if(e.target.id==="as"||e.target.id==="afx")saveAjustes(true)});
 function saveAjustes(quiet){const st=S(),a=A.$("#as"),f=A.$("#afx");if(a){const v=Math.round(A.parseAmt(a.value));if(v>=0&&v<=90)st.cfg.savePct=v}if(f){const v=A.parseAmt(f.value);if(v>0&&v!==st.cfg.fx){st.cfg.fx=v;st.cfg.fxAuto=false}}A.persist();if(!quiet)A.render()}
 A.act.fxget=async b=>{const n=A.$("#fxn");n.textContent="Buscando…";const v=await A.fetchFx(true);if(v){A.$("#afx").value=String(v);n.textContent="Dólar MEP de hoy: $ "+A.fmt(v)+". Se actualiza solo al abrir la app."}else n.textContent="No pude traerlo (¿sin señal?). Cargalo a mano."};
 A.act.export=()=>{S().ui.bk=A.today();A.persist();const b=new Blob([JSON.stringify(S(),null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="tope-respaldo-"+A.today()+".json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)};
-document.addEventListener("change",async e=>{if(e.target.id==="imp"){const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());if(j.tope==="novedades"){A.mergeIn(j);return}if(j.v!==5||!Array.isArray(j.mov))throw 0;A.S=j;A.persist();A.close();A.render();A.toast("Respaldo importado")}catch(x){A.toast("Ese archivo no es un respaldo de Tope")}}});
+let PEND=null;
+document.addEventListener("change",async e=>{if(e.target.id==="imp"){const f=e.target.files[0];e.target.value="";if(!f)return;try{const j=JSON.parse(await f.text());if(j.tope==="novedades"){A.mergeIn(j);return}
+ if(j.v!==5||!Array.isArray(j.mov)||!Array.isArray(j.cats)||!j.cfg||!Array.isArray(j.rec))throw 0;PEND=j;
+ A.sheet(`${A.head("Importar respaldo")}<div class="sh-body"><div class="note" style="margin-top:0">Este respaldo tiene ${j.mov.length} movimientos. Va a reemplazar todo lo que tenés ahora en este teléfono.</div><button class="go" data-a="impok">Reemplazar todo</button><button class="go ghost" data-a="close">Cancelar</button></div>`,{part:true})}catch(x){A.toast("Ese archivo no es un respaldo de Tope")}}});
+A.act.impok=()=>{const j=PEND;PEND=null;if(!j)return;["goals","inv","debts","spr"].forEach(k=>{if(!Array.isArray(j[k]))j[k]=[]});j.ui=j.ui||{tab:"hoy",per:"mes"};j.init=j.init||{ars:0,usd:0};j.typ=j.typ||{};T.migrate(j);A.S=j;A.persist();A.close();A.render();A.toast("Respaldo importado")};
 A.act.reset=b=>{if(b.dataset.s!=="1"){b.dataset.s="1";b.textContent="Tocá de nuevo para borrar todo";return}A.S=T.fresh();A.persist();A.close(true);A.render();A.wizard()};
 
 /* ===== asistente inicial de 5 pasos ===== */

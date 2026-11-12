@@ -8,8 +8,9 @@ A.fitK=function(){try{const q=new URLSearchParams(location.search).get("k");let 
  document.documentElement.style.setProperty("--k",String(k));A.K=k}catch(e){}};
 A.fitK();
 A.S=T.load(localStorage);
+let _sf=0;T.saveFail(()=>{if(Date.now()-_sf>20000){_sf=Date.now();setTimeout(()=>A.toast&&A.toast("No se pudo guardar: sin espacio en el teléfono. Hacé un respaldo"),50)}});
 A.persist=()=>T.save(localStorage,A.S);
-A.today=()=>{const q=new URLSearchParams(location.search).get("hoy");return q||T.iso(new Date())};
+A.today=()=>{const q=new URLSearchParams(location.search).get("hoy");return q||T.iso(new Date())};T.nowF.f=A.today;
 A.$=s=>document.querySelector(s);
 A.esc=s=>String(s==null?"":s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
 A.fmt=n=>{n=Math.round(n);const s=String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g,".");return (n<0?"-":"")+s};

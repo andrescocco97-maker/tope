@@ -78,4 +78,10 @@ A.pinHtml=()=>`<div class="h3">Seguridad</div><button class="go ghost" data-a="p
 A.act.pinset=()=>{const st=S();A.form("PIN de 4 números",[{k:"p",label:"Nuevo PIN",type:"num",v:"",ph:"1234"}],{ok:"Guardar",extra:st.cfg.pin?[{i:0,t:"Quitar el PIN",cls:"red",f:()=>{delete st.cfg.pin;A.persist();A.close();A.toast("PIN quitado")}}]:[],
  save:v=>{const p=String(v.p||"").replace(/\D/g,"");if(p.length!==4){A.toast("Tiene que tener 4 números");return false}st.cfg.pin=hash(p);A.toast("PIN activado")}})};
 if(S().cfg&&S().cfg.pin)setTimeout(A.lock,0);
+
+/* ---- actualizar fijos por inflación ---- */
+A.inflHtml=()=>`<button class="go ghost" data-a="infl" style="height:46px;margin-top:6px">Subir mis gastos fijos por inflación</button>`;
+A.act.infl=()=>{const st=S(),fj=st.rec.filter(r=>r.kind==="gasto"&&!r.paused&&r.cur!=="USD");
+ A.form("Subir fijos por inflación",[{type:"note",label:fj.length?"Se suma ese porcentaje a "+fj.length+" gastos fijos en pesos (alquiler, expensas, servicios…). Los pagos ya hechos no cambian.":"No tenés gastos fijos en pesos."},{k:"p",label:"Porcentaje",type:"num",v:"",ph:"Ej. 3"}],
+  {ok:"Aplicar",save:v=>{const p=A.parseAmt(v.p);if(!(p>0&&p<=100)||!fj.length)return false;const old=fj.map(r=>[r,r.a]);fj.forEach(r=>{r.a=Math.round(r.a*(1+p/100))});A.toast("Fijos subidos un "+p+"%",()=>{old.forEach(([r,a])=>{r.a=a});A.persist();A.render()})}})};
 })();

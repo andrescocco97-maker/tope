@@ -33,7 +33,7 @@ function slices(S,r,drill){
   segs.sort((a,b)=>b.v-a.v);return {segs,tot:segs.reduce((s,x)=>s+x.v,0),cat:c}}
  const by=T.byCat(S,r.from,r.to);const ent=Object.entries(by).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]);
  const ah=T.ahorroRange(S,r.from,r.to);
- const tot=ent.reduce((s,e)=>s+e[1],0)+ah;
+ const tot=ent.reduce((s,e)=>s+e[1],0)+ah,spent=tot-ah;
  let main=ent.filter((e,i)=>i<6&&e[1]/tot>=.04),rest=ent.filter(e=>!main.includes(e));
  const segs=main.map(([id,v])=>({id,n:A.cat(id).n,c:A.cat(id).c,v}));
  if(rest.length)segs.push({id:"otros",n:"Otros",c:"#7A756A",v:rest.reduce((s,e)=>s+e[1],0),sub:rest});
@@ -41,7 +41,7 @@ function slices(S,r,drill){
  /* nunca dos porciones del mismo color */
  const FB=["#FFC21A","#FF3B30","#35D07F","#8B5CF6","#FF8A00","#FF4D8D","#14B8A6","#A3E635","#E879F9","#A8683A"],used=new Set([AHC.toLowerCase(),"#7a756a"]);
  segs.forEach(sg=>{if(sg.id==="_ah"||sg.id==="otros")return;let c=sg.c.toLowerCase();if(used.has(c)){c=(FB.find(x=>!used.has(x.toLowerCase()))||c).toLowerCase();sg.c=c}used.add(c)});
- return {segs,tot};
+ return {segs,tot,spent};
 }
 function donutSvg(sl,sel){
  const R0=79,W=24,C=2*Math.PI*R0,n=sl.segs.length;let base=`<circle cx="100" cy="100" r="${R0}" stroke="rgba(255,255,255,.06)" stroke-width="${W}"/>`,top="",off=0;
@@ -62,8 +62,8 @@ A.drawDonut=function(){
  const sl=slices(A.S,r,A._drill);
  const sel=sl.segs.find(x=>x.id===A._sel)?A._sel:null;if(!sel)A._sel=null;
  const cur=sel?sl.segs.find(x=>x.id===sel):null,dc=sl.cat;
- const top=dc?`<span class="dl" style="color:${dc.c}">‹ ${A.esc(dc.n)}</span>`:`<span class="dl">Total</span>`;
- const center=cur?`<span class="dl" style="color:${cur.c}">${A.esc(cur.n)}</span><b>${A.money(cur.v)}</b><span class="dl">${Math.round(cur.v/sl.tot*100)}%</span>`:`${top}<b>${A.money(sl.tot)}</b>`;
+ const top=dc?`<span class="dl" style="color:${dc.c}">‹ ${A.esc(dc.n)}</span>`:`<span class="dl">${sl.spent!=null?"Gastaste":"Total"}</span>`;
+ const center=cur?`<span class="dl" style="color:${cur.c}">${A.esc(cur.n)}</span><b>${A.money(cur.v)}</b><span class="dl">${Math.round(cur.v/sl.tot*100)}%</span>`:`${top}<b>${A.money(sl.spent!=null?sl.spent:sl.tot)}</b>`;
  const mvRow=(m,name)=>`<button class="dr" data-a="edit" data-id="${m.id}"><span class="dd">${A.dateShort(m.d).replace(/^\S+ /,"")}</span><span>${A.esc(m.note||name)}${m.tag?` · ${A.esc(m.tag)}`:""}</span><b>${m.t==="r"?"+ ":""}${A.money(m.a)}</b></button>`;
  const inR=m=>m.d>=r.from&&m.d<=r.to;
  let det="";
@@ -115,7 +115,7 @@ A.renderHoy=function(){
  const limH=per==="mes"?`<div class="h3" style="display:flex;justify-content:space-between;align-items:baseline"><span>Límites del mes</span><button class="addl" data-a="limnuevo">+ Definir</button></div>`+(lc.length?lc.map(c=>{const g=by[c.id]||0,p=g/c.lim,col=p>=1?"var(--warn)":p>=.8?"#FFC21A":"#35D07F";return `<button class="lim" data-a="limedit" data-id="${c.id}"><span class="lt"><b>${A.esc(c.n)}</b><em style="color:${p>=1?"var(--warn)":"var(--mute)"}">${p>=1?"te pasaste "+A.money(g-c.lim):"quedan "+A.money(c.lim-g)}</em></span><span class="lb"><i style="width:${Math.min(100,p*100)}%;background:${col}"></i></span><span class="ln">${A.money(g)} de ${A.money(c.lim)}</span></button>`}).join(""):`<div class="note" style="margin:2px 0 8px">Ponele un tope mensual a Súper, Salidas o lo que quieras y te aviso cuando te acerques.</div>`):"";
  const ahT=(per==="mes"&&m.ahorro>0&&ahRem>0)?`<button class="tile ahor" data-a="ahorrar"><span class="d">$</span><span class="m">Ahorro del mes<small>Falta anotar · ${ahReg>0?"ya anotaste "+A.money(ahReg):"todavía no anotaste nada"}</small></span><span class="a">${A.money(ahRem)}</span></button>`:"";
  $h.innerHTML=`<div class="field">
- <div class="fdate"><button data-a="ajustes" aria-label="Fecha y ajustes">${A.dateLong(today)}</button><small>${ru.txt}</small></div>
+ <div class="fdate"><button data-a="ajustes" aria-label="Fecha y ajustes">${A.dateLong(today)} <svg class="gear" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg></button><small>${ru.txt}</small></div>
  ${ru.html}
  <div class="seg" role="tablist">${PER.map(p=>`<button class="${p[0]===per?"on":""}" data-a="per" data-p="${p[0]}" role="tab">${p[1]}</button>`).join("")}</div>
  <div class="lab">${lab}</div>
@@ -197,7 +197,7 @@ A.renderMetas=function(){
  <span class="chips" style="margin:0"><button class="chip ${gc==="ARS"?"on":""}" data-a="gcur" data-c="ARS">Pesos</button><button class="chip ${gc==="USD"?"on":""}" data-a="gcur" data-c="USD">Dólares</button></span></div>`;
  if(!gl.length)h+=`<h1 class="title" style="margin-top:6px">Tus metas</h1><div class="empty">Todavía no cargaste ninguna.<br>La casa, un viaje o el colchón: elegí cuánto y para cuándo.</div>`;
  gl.forEach((g,i)=>{
-  const tgt=A.goalTarget(g),sv=T.goalSaved(S,g),p=tgt>0?Math.min(100,sv/tgt*100):0,mo=T.goalMonthly(S,g);
+  const tgt=A.goalTarget(g),sv=T.goalSaved(S,g),p=tgt>0?Math.min(100,sv/tgt*100):0,mo=T.goalMonthly(S,g,A.today());
   const left=Math.max(0,tgt-sv);const meses=mo>0?Math.ceil(left/mo):null;
   let line="";if(g.auto==="colchon"&&tgt<=0)line="Se calcula con 6 meses de tus gastos vitales.";
   else if(left<=0)line="Meta cumplida.";
@@ -251,7 +251,7 @@ A.act.pcur=b=>{A.S.ui.cur=b.dataset.c;A.persist();A.renderPat()};
 
 /* ---------- navegación ---------- */
 const TABS=[["mov","Historial","list"],["hoy","Hoy","clock"],["gap"],["metas","Metas","home"],["pat","Patrimonio","chart"]];
-A.drawTabs=function(){A.$("#tabs").innerHTML=TABS.map(t=>t[0]==="gap"?`<span class="gap"></span>`:`<button class="${A.S.ui.tab===t[0]?"on":""}" data-a="tab" data-t="${t[0]}"><svg viewBox="0 0 24 24"><path d="${A.P[t[2]]}"/></svg>${t[1]}</button>`).join("")};
+A.drawTabs=function(){A.$("#tabs").innerHTML=TABS.map(t=>t[0]==="gap"?`<span class="gap"></span>`:`<button class="${A.S.ui.tab===t[0]?"on":""}" data-a="tab" data-t="${t[0]}" ${A.S.ui.tab===t[0]?'aria-current="page"':""}><svg viewBox="0 0 24 24"><path d="${A.P[t[2]]}"/></svg>${t[1]}</button>`).join("")};
 A.render=function(){
  const tab=A.S.ui.tab;
  ({hoy:A.renderHoy,mov:A.renderMov,metas:A.renderMetas,pat:A.renderPat})[tab]();

@@ -35,6 +35,7 @@ const OLDSUB={"compras.ropa":"compras.ropaycalzado","compras.perfumeria":"compra
 const isOld=S=>S.cats.some(c=>c.id==="super"||c.id==="comb"||c.id==="casa"||c.id==="servicios");
 /* pasa datos viejos al formato nuevo */
 function migrate(S){
+ if(!S.fxv){(S.mov||[]).forEach(m=>{if(m.t==="a"&&!m.u&&!m.fx&&S.cfg.fx)m.fx=S.cfg.fx});S.fxv=1}
  if(S.colv!==3){const M={mascota:"#A8683A",vivienda:"#35D07F",transp:"#8B5CF6",vehiculo:"#FF8A00",comunic:"#14B8A6",finanzas:"#A3E635",otros:"#8E8A80"};(S.cats||[]).forEach(c=>{if(M[c.id])c.c=M[c.id]});S.colv=3}
  if(isOld(S)){
   const keep=S.cats.filter(c=>/^c/.test(c.id)&&!OLDMAP[c.id]);
@@ -51,7 +52,7 @@ function migrate(S){
  init:{ars:0,usd:0},typ:{},ui:{tab:"hoy",per:"mes"}});
 
 function load(store){try{const j=JSON.parse(store.getItem(KEY));if(j&&j.v===5)return j}catch(e){}return fresh()}
-function save(store,S){try{store.setItem(KEY,JSON.stringify(S))}catch(e){}}
+let saveFail=null;function save(store,S){try{store.setItem(KEY,JSON.stringify(S));return true}catch(e){if(saveFail)saveFail(e);return false}}
 
 /* ---- fechas útiles ---- */
 function lastBizDay(k){const [y,m]=k.split("-").map(Number);const d=new Date(y,m,0);while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()-1);return d}
@@ -84,20 +85,29 @@ function occs0(r,k){
 }
 function incomeMonthOf(date,feeds){const k=ymOf(date);return feeds==="next"?addM(k,1):k}
 
+const nowF={f:()=>iso(new Date())};
+/* ---- cuotas: cada mes cuenta como un gasto real (la última lleva el resto) ---- */
+function cuotaAmt(s,i){return i===s.n-1?s.total-R(s.total/s.n)*(s.n-1):R(s.total/s.n)}
+function cuotasMov(S,from,to,until){const lim=until||nowF.f(),out=[];(S.spr||[]).forEach(s=>{if(s.ended&&!s.endM)return;for(let i=0;i<s.n;i++){const mk=addM(s.start,i);if(s.ended&&mk>=s.endM)break;const d=mk+"-01";if(d>=from&&d<=to&&d<=lim)out.push({t:"g",a:cuotaAmt(s,i),c:s.c||"otros",d,cuota:true,note:s.name})}});return out}
+/* un ingreso cargado a mano se vincula solo con el sueldo esperado más cercano (así no se cuenta dos veces) */
+function matchIncome(S,m){let best=null,bd=99;
+ (S.rec||[]).forEach(r=>{if(r.kind!=="ingreso"||r.paused)return;const kk=ymOf(m.d),k=r.feeds==="next"?addM(kk,1):kk;
+  calc(S,k,m.d).pend.forEach(p=>{if(p.kind!=="ingreso"||p.r.id!==r.id)return;const d=Math.abs(daysTo(p.date,m.d));
+   const nm=m.note&&r.name&&(m.note.toLowerCase().includes(r.name.toLowerCase())||r.name.toLowerCase().includes(m.note.toLowerCase()))?-5:0;if(d+nm<bd&&d<=20){bd=d+nm;best={rid:r.id,occ:p.occ,feeds:r.feeds||"cur"}}})});return best}
 /* ---- cálculo del mes ---- */
 function calc(S,k,today){
  const T=today||iso(new Date());
  const fx=S.cfg.fx||1;
  const conf=new Set(S.mov.filter(m=>m.rid).map(m=>m.rid+"|"+m.occ));
  const confMov={};S.mov.forEach(m=>{if(m.rid)confMov[m.rid+"|"+m.occ]=m});
- let ingresos=0,ingEst=0,fijos=0,cuotas=0,fondo=0;const fijosList=[],pend=[];
+ const countedInc=new Set();let ingresos=0,ingEst=0,fijos=0,cuotas=0,fondo=0;const fijosList=[],pend=[];
  // ingresos reales del mes (movimientos tipo i)
  S.mov.forEach(m=>{if(m.t==="i"&&!m.rid&&incomeMonthOf(m.d,m.feeds)===k)ingresos+=m.a});
  S.rec.forEach(r=>{
   if(r.kind==="ingreso"){
    // cada ocurrencia que alimenta el mes k
    const kk=r.feeds==="next"?addM(k,-1):k;
-   occs(r,kk).forEach(o=>{const c=confMov[r.id+"|"+o.key];if(c)ingresos+=c.a;else{ingresos+=r.a;ingEst+=r.a;pend.push({kind:"ingreso",r,date:o.date,occ:o.key,a:r.a})}});
+   occs(r,kk).forEach(o=>{const c=confMov[r.id+"|"+o.key];if(c){ingresos+=c.a;countedInc.add(r.id+"|"+o.key)}else{ingresos+=r.a;ingEst+=r.a;pend.push({kind:"ingreso",r,date:o.date,occ:o.key,a:r.a})}});
   }else if(r.kind==="gasto"){
    occs(r,k).forEach(o=>{const c=confMov[r.id+"|"+o.key];const a=c?c.a:(r.am&&r.am[o.key]!=null?r.am[o.key]:R(r.cur==="USD"?r.a*fx:r.a));fijos+=a;fijosList.push({r,date:o.date,occ:o.key,a,done:!!c});if(!c)pend.push({kind:"gasto",r,date:o.date,occ:o.key,a})});
   }else if(r.kind==="anual"){
@@ -106,7 +116,12 @@ function calc(S,k,today){
    if(k===ymOf(r.due)){const key=ymOf(r.due);const c=confMov[r.id+"|"+key];if(!c&&!(r.skip&&r.skip[key]))pend.push({kind:"anual",r,date:r.due,occ:key,a:R(r.cur==="USD"?r.a*fx:r.a)})}
   }
  });
- S.spr.forEach(s=>{const df=diffM(s.start,k);if(df>=0&&df<s.n&&!s.ended)cuotas+=R(s.total/s.n)});
+ /* pagos y cobros confirmados que la regla ya no genera (terminada, pausada, cambiada) siguen contando */
+ const seen=new Set();fijosList.forEach(x=>seen.add(x.r.id+"|"+x.occ));
+ S.mov.forEach(m=>{if(!m.rid||seen.has(m.rid+"|"+m.occ))return;
+  if(m.t==="g"&&ymOf(m.d)===k&&S.rec.some(r=>r.id===m.rid&&r.kind==="gasto")){fijos+=m.a;fijosList.push({r:S.rec.find(r=>r.id===m.rid),date:m.d,occ:m.occ,a:m.a,done:true})}
+  else if(m.t==="i"&&incomeMonthOf(m.d,m.feeds)===k&&!countedInc.has(m.rid+"|"+m.occ)&&S.rec.some(r=>r.id===m.rid&&r.kind==="ingreso"))ingresos+=m.a});
+ S.spr.forEach(s=>{const df=diffM(s.start,k);if(df>=0&&df<s.n&&!s.ended)cuotas+=cuotaAmt(s,df)});
  const pct=(S.cfg.savePctM&&S.cfg.savePctM[k]!=null?S.cfg.savePctM[k]:S.cfg.savePct)/100;
  const ahorro=R(ingresos*pct);
  const libre=ingresos-ahorro-fijos-cuotas-fondo;
@@ -130,18 +145,18 @@ function week(S,today){
 }
 /* sueldos pendientes y gasto por categoría en un rango */
 function byCat(S,from,to){
- const o={};S.mov.forEach(m=>{if((m.t==="g"||m.t==="r")&&m.d>=from&&m.d<=to)o[m.c]=(o[m.c]||0)+(m.t==="r"?-m.a:m.a)});return o;
+ const o={};S.mov.forEach(m=>{if((m.t==="g"||m.t==="r")&&m.d>=from&&m.d<=to)o[m.c]=(o[m.c]||0)+(m.t==="r"?-m.a:m.a)});cuotasMov(S,from,to).forEach(m=>{o[m.c]=(o[m.c]||0)+m.a});return o;
 }
 function isVital(S,m){const c=S.cats.find(x=>x.id===m.c);if(!c)return false;if(m.s){const x=(c.subs||[]).find(y=>y.id===m.s);if(x)return !!x.v}return !!c.v}
-function bySub(S,from,to,cid){const o={};S.mov.forEach(m=>{if((m.t==="g"||m.t==="r")&&m.c===cid&&m.d>=from&&m.d<=to){const k=m.s||"_";o[k]=(o[k]||0)+(m.t==="r"?-m.a:m.a)}});return o}
+function bySub(S,from,to,cid){const o={};cuotasMov(S,from,to).forEach(m=>{if(m.c===cid)o._=(o._||0)+m.a});S.mov.forEach(m=>{if((m.t==="g"||m.t==="r")&&m.c===cid&&m.d>=from&&m.d<=to){const k=m.s||"_";o[k]=(o[k]||0)+(m.t==="r"?-m.a:m.a)}});return o}
 function ahorroRange(S,from,to){return S.mov.filter(m=>m.t==="a"&&m.d>=from&&m.d<=to).reduce((s,m)=>s+m.a,0)}
 /* categorías ordenadas por uso (las que más cargás, primero) */
 function catOrder(S){const f={};S.mov.forEach(m=>{if(m.t==="g"&&!m.rid)f[m.c]=(f[m.c]||0)+1});return S.cats.map((c,i)=>[c,i]).sort((a,b)=>(f[b[0].id]||0)-(f[a[0].id]||0)||a[1]-b[1]).map(x=>x[0])}
 function typical(S,cid){const v=S.mov.filter(m=>m.t==="g"&&!m.rid&&m.c===cid).map(m=>m.a).sort((a,b)=>a-b);return S.typ[cid]||(v.length>=2?v[Math.floor(v.length/2)]:0)}
 function spentRange(S,from,to){return Object.values(byCat(S,from,to)).reduce((s,v)=>s+v,0)}
 /* cajas */
-function boxes(S){
- let ars=S.init.ars||0,usd=S.init.usd||0;
+function boxes(S,until){
+ let ars=S.init.ars||0,usd=S.init.usd||0;cuotasMov(S,"0000-00-00","9999-99-99",until).forEach(m=>{ars-=m.a});
  S.mov.forEach(m=>{
   if(m.ini)return;
   if(m.t==="i")ars+=m.a;
@@ -158,16 +173,16 @@ function debtsTotal(S){return S.debts.reduce((s,d)=>s+(d.cur==="USD"?d.a*S.cfg.f
 function owedTotal(S){return S.mov.filter(m=>m.t==="d"&&!m.closed).reduce((s,m)=>s+m.a,0)}
 function invVal(S,i){return i.v+S.mov.filter(m=>m.t==="a"&&m.inv===i.id).reduce((s,m)=>s+(i.cur==="USD"?(m.u||m.a/(m.fx||S.cfg.fx||1)):m.a),0)}
 function invTotal(S){return S.inv.reduce((s,i)=>s+(i.cur==="USD"?invVal(S,i)*S.cfg.fx:invVal(S,i)),0)}
-function netWorth(S){const b=boxes(S);return R(b.ars+b.usd*S.cfg.fx+invTotal(S)+owedTotal(S)-debtsTotal(S))}
+function netWorth(S,until){const b=boxes(S,until);return R(b.ars+b.usd*S.cfg.fx+invTotal(S)+owedTotal(S)-debtsTotal(S))}
 function goalShare(S,g,m){ // cuánto de un ahorro le toca a la meta: la que eligió, o el reparto por % entre todas
  const amt=g.cur==="USD"?(m.u||(m.fx?m.a/m.fx:m.a/(S.cfg.fx||1))):m.a;
  if(m.goal)return m.goal===g.id?amt:0;
  const tot=S.goals.reduce((x,y)=>x+(y.pct||0),0);return tot>0?amt*(g.pct||0)/tot:0}
 function goalSaved(S,g){return (g.saved0||0)+S.mov.filter(m=>m.t==="a").reduce((s,m)=>s+goalShare(S,g,m),0)}
-function goalMonthly(S,g){ // aporte mensual real: ahorro a la meta de los últimos 3 meses completos
- const T=ym(new Date());const k0=addM(T,-3);
- const s=S.mov.filter(m=>m.t==="a"&&ymOf(m.d)>=k0&&ymOf(m.d)<T).reduce((s,m)=>s+goalShare(S,g,m),0);
- return s/3;
+function goalMonthly(S,g,today){ // aporte mensual real: promedio de los meses que lleva ahorrando (hasta 3), contando el mes en curso
+ const cur=ymOf(today||nowF.f()),all=S.mov.filter(m=>m.t==="a");if(!all.length)return 0;
+ const first=all.reduce((q,m)=>m.d<q?m.d:q,all[0].d),n=Math.max(1,Math.min(3,diffM(ymOf(first),cur)+1)),k0=addM(cur,-(n-1));
+ return all.filter(m=>ymOf(m.d)>=k0&&ymOf(m.d)<=cur).reduce((s,m)=>s+goalShare(S,g,m),0)/n
 }
 /* serie de patrimonio mes a mes (aprox.: cajas con el dólar vigente) */
 function netSeries(S,nowYm){
@@ -175,7 +190,7 @@ function netSeries(S,nowYm){
  const out=[];let k=start;
  while(k<=nowYm){
   const last=k+"-"+pad(dim(k));const sub={...S,mov:S.mov.filter(m=>m.d<=last)};
-  out.push({k,v:netWorth(sub)});k=addM(k,1);
+  out.push({k,v:netWorth(sub,last)});k=addM(k,1);
  }
  return out;
 }
@@ -189,11 +204,11 @@ function usual(S,n){
 }
 /* próximos pagos (pendientes de los próximos 45 días) */
 function upcoming(S,today){ // pagos que faltan este mes (los vencidos incluidos); nada de meses que vienen
- const k=ymOf(today);const all=calc(S,k,today).pend.filter(p=>p.kind!=="ingreso");
+ const k=ymOf(today);let all=calc(S,k,today).pend.filter(p=>p.kind!=="ingreso");[1,2].forEach(j=>{all=all.concat(calc(S,addM(k,-j),today).pend.filter(p=>p.kind!=="ingreso"&&p.date<today))});
  all.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);return all;
 }
 function daysTo(a,b){return Math.round((fromIso(a)-fromIso(b))/864e5)}
 
-const T={KEY,fresh,load,save,iso,fromIso,ym,ymOf,addM,diffM,dim,uid,R,pad,lastBizDay,nthBizDay,recDay,occs,incomeMonthOf,calc,week,byCat,bySub,isVital,ahorroRange,catOrder,typical,migrate,spentRange,boxes,invVal,debtsTotal,owedTotal,invTotal,netWorth,goalSaved,goalMonthly,netSeries,usual,upcoming,daysTo,CATS};
+const T={matchIncome,nowF,cuotasMov,cuotaAmt,saveFail:f=>{saveFail=f},KEY,fresh,load,save,iso,fromIso,ym,ymOf,addM,diffM,dim,uid,R,pad,lastBizDay,nthBizDay,recDay,occs,incomeMonthOf,calc,week,byCat,bySub,isVital,ahorroRange,catOrder,typical,migrate,spentRange,boxes,invVal,debtsTotal,owedTotal,invTotal,netWorth,goalSaved,goalMonthly,netSeries,usual,upcoming,daysTo,CATS};
 if(typeof module!=="undefined"&&module.exports)module.exports=T;else root.T=T;
 })(typeof globalThis!=="undefined"?globalThis:this);
