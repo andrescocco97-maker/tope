@@ -34,13 +34,16 @@ function slices(S,r,drill){
  return {segs,tot};
 }
 function donutSvg(sl,sel){
- const R0=79,W=24,c=2*Math.PI*R0;let base=`<circle cx="100" cy="100" r="${R0}" stroke="rgba(255,255,255,.06)" stroke-width="${W}"/>`,off=0,top="";
- const gap=sl.segs.length>1?7:0;
- sl.segs.forEach(s=>{const full=c*s.v/sl.tot,on=sel===s.id,dim=sel&&!on,sw=on?32:W;
-  const len=Math.max(.1,full-gap-W),o=-(off+gap/2+W/2);
-  const el=`<circle data-a="slice" data-i="${s.id}" cx="100" cy="100" r="${R0}" stroke="${s.c}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${len.toFixed(1)} ${(c-len).toFixed(1)}" stroke-dashoffset="${o.toFixed(1)}" opacity="${dim?.3:1}" style="cursor:pointer;transition:stroke-width .18s,opacity .18s"/>`;
+ const R0=79,W=24,C=2*Math.PI*R0,n=sl.segs.length;let base=`<circle cx="100" cy="100" r="${R0}" stroke="rgba(255,255,255,.06)" stroke-width="${W}"/>`,top="",off=0;
+ const P=(r,a)=>[(100+r*Math.cos(a)).toFixed(2),(100+r*Math.sin(a)).toFixed(2)];
+ sl.segs.forEach(s=>{const on=sel===s.id,dim=sel&&!on,full=C*s.v/sl.tot,ex=on?4:0,op=dim?.3:1;let el;
+  if(n===1)el=`<circle data-a="slice" data-i="${s.id}" cx="100" cy="100" r="${R0}" stroke="${s.c}" stroke-width="${W+ex*2}" style="cursor:pointer"/>`;
+  else{const gap=4,ins=2,sg=gap/2+ins; // esquinas apenas redondeadas: sector con borde del mismo color
+   const a0=-Math.PI/2+(off+sg)/R0,a1=-Math.PI/2+(off+full-sg)/R0;const w=Math.max(a1-a0,.02),b0=a0,b1=a0+w;
+   const ro=R0+W/2+ex-ins,ri=R0-W/2-ex+ins,lg=w>Math.PI?1:0;const [x1,y1]=P(ro,b0),[x2,y2]=P(ro,b1),[x3,y3]=P(ri,b1),[x4,y4]=P(ri,b0);
+   el=`<path data-a="slice" data-i="${s.id}" d="M${x1} ${y1}A${ro} ${ro} 0 ${lg} 1 ${x2} ${y2}L${x3} ${y3}A${ri} ${ri} 0 ${lg} 0 ${x4} ${y4}Z" fill="${s.c}" stroke="${s.c}" stroke-width="${ins*2}" stroke-linejoin="round" style="cursor:pointer;transition:opacity .18s" opacity="${op}"/>`}
   if(on)top+=el;else base+=el;off+=full});
- return `<svg viewBox="0 0 200 200" role="img" aria-label="En qué se fue la plata"><g transform="rotate(-90 100 100)" fill="none">${base}${top}</g></svg>`;
+ return `<svg viewBox="0 0 200 200" role="img" aria-label="En qué se fue la plata"><g fill="none">${base}${top}</g></svg>`;
 }
 function hasSubs(S,r,id){const c=A.cat(id);return !!(c.subs&&c.subs.length&&S.mov.some(m=>(m.t==="g"||m.t==="r")&&m.c===id&&m.s&&m.d>=r.from&&m.d<=r.to))}
 A.drawDonut=function(){
